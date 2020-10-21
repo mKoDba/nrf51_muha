@@ -11,66 +11,51 @@ $(OUTPUT_DIRECTORY)/nrf51422_xxac.out: \
 
 # Source files common to all targets
 SRC_FILES += \
-  $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_serial.c \
-  $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
-  $(SDK_ROOT)/components/libraries/button/app_button.c \
-  $(SDK_ROOT)/components/libraries/util/app_error.c \
-  $(SDK_ROOT)/components/libraries/util/app_error_weak.c \
+  $(PROJ_DIR)/main.c \
+  $(PROJ_DIR)/application/nrf51_muha.c \
+  $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/SDK_components/libraries/util/app_error.c \
+  $(PROJ_DIR)/SDK_components/libraries/util/app_error_weak.c \
+  $(PROJ_DIR)/SDK_components/libraries/util/nrf_assert.c \
+  $(PROJ_DIR)/SDK_components/libraries/util/sdk_errors.c \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master/nrf_drv_spi.c \
+  $(PROJ_DIR)/segger_rtt/RTT_Syscalls_GCC.c \
+  $(PROJ_DIR)/segger_rtt/SEGGER_RTT_printf.c \
+  $(PROJ_DIR)/segger_rtt/SEGGER_RTT.c \
+  $(PROJ_DIR)/segger_rtt/nrf_log_backend_serial.c \
+  $(PROJ_DIR)/segger_rtt/nrf_log_frontend.c \
+  $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.S \
+  $(SDK_ROOT)/components/toolchain/system_nrf51.c \
   $(SDK_ROOT)/components/libraries/timer/app_timer.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/crc16/crc16.c \
   $(SDK_ROOT)/components/libraries/fds/fds.c \
   $(SDK_ROOT)/components/libraries/fstorage/fstorage.c \
   $(SDK_ROOT)/components/libraries/hardfault/hardfault_implementation.c \
-  $(SDK_ROOT)/components/libraries/util/nrf_assert.c \
-  $(SDK_ROOT)/components/libraries/util/sdk_errors.c \
   $(SDK_ROOT)/components/libraries/util/sdk_mapped_flags.c \
   $(SDK_ROOT)/components/libraries/sensorsim/sensorsim.c \
-  $(SDK_ROOT)/components/boards/boards.c \
   $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
   $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
-  $(SDK_ROOT)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
-  $(SDK_ROOT)/components/drivers_nrf/uart/nrf_drv_uart.c \
-  $(SDK_ROOT)/components/libraries/bsp/bsp.c \
-  $(SDK_ROOT)/components/libraries/bsp/bsp_btn_ble.c \
-  $(SDK_ROOT)/components/libraries/bsp/bsp_nfc.c \
-  $(PROJ_DIR)/main.c \
-  $(SDK_ROOT)/external/segger_rtt/RTT_Syscalls_GCC.c \
-  $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
-  $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT_printf.c \
-  $(SDK_ROOT)/components/ble/common/ble_advdata.c \
-  $(SDK_ROOT)/components/ble/ble_advertising/ble_advertising.c \
-  $(SDK_ROOT)/components/ble/common/ble_conn_params.c \
-  $(SDK_ROOT)/components/ble/common/ble_conn_state.c \
-  $(SDK_ROOT)/components/ble/common/ble_srv_common.c \
-  $(SDK_ROOT)/components/ble/peer_manager/gatt_cache_manager.c \
-  $(SDK_ROOT)/components/ble/peer_manager/gatts_cache_manager.c \
-  $(SDK_ROOT)/components/ble/peer_manager/id_manager.c \
-  $(SDK_ROOT)/components/ble/nrf_ble_gatt/nrf_ble_gatt.c \
-  $(SDK_ROOT)/components/ble/peer_manager/peer_data.c \
-  $(SDK_ROOT)/components/ble/peer_manager/peer_data_storage.c \
-  $(SDK_ROOT)/components/ble/peer_manager/peer_database.c \
-  $(SDK_ROOT)/components/ble/peer_manager/peer_id.c \
-  $(SDK_ROOT)/components/ble/peer_manager/peer_manager.c \
-  $(SDK_ROOT)/components/ble/peer_manager/pm_buffer.c \
-  $(SDK_ROOT)/components/ble/peer_manager/pm_mutex.c \
-  $(SDK_ROOT)/components/ble/peer_manager/security_dispatcher.c \
-  $(SDK_ROOT)/components/ble/peer_manager/security_manager.c \
-  $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf52.S \
-  $(SDK_ROOT)/components/toolchain/system_nrf52.c \
-  $(SDK_ROOT)/components/ble/ble_services/ble_bas/ble_bas.c \
-  $(SDK_ROOT)/components/ble/ble_services/ble_dis/ble_dis.c \
-  $(SDK_ROOT)/components/ble/ble_services/ble_hrs/ble_hrs.c \
   $(SDK_ROOT)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
 
 # Include folders common to all targets
 INC_FOLDERS += \
+  $(PROJ_DIR)/segger_rtt \
+  $(PROJ_DIR)/application \
+  $(PROJ_DIR)/application/bsp \
+  $(PROJ_DIR)/application/config \
+  $(PROJ_DIR)/application/config/bsp \
+  $(PROJ_DIR)/SDK_components/libraries/util \
+  $(PROJ_DIR)/SDK_components/device \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/hal \
   $(SDK_ROOT)/components/drivers_nrf/comp \
   $(SDK_ROOT)/components/drivers_nrf/twi_master \
   $(SDK_ROOT)/components/ble/ble_services/ble_ancs_c \
   $(SDK_ROOT)/components/ble/ble_services/ble_ias_c \
   $(SDK_ROOT)/components/libraries/pwm \
-  $(SDK_ROOT)/components/softdevice/s132/headers/nrf52 \
+  $(SDK_ROOT)/components/softdevice/s130/headers/nrf51 \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc/acm \
   $(SDK_ROOT)/components/libraries/usbd/class/hid/generic \
   $(SDK_ROOT)/components/libraries/usbd/class/msc \
@@ -79,8 +64,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_services/ble_gls \
   $(SDK_ROOT)/components/libraries/fstorage \
   $(SDK_ROOT)/components/drivers_nrf/i2s \
-  $(SDK_ROOT)/components/libraries/gpiote \
-  $(SDK_ROOT)/components/drivers_nrf/gpiote \
   $(SDK_ROOT)/components/boards \
   $(SDK_ROOT)/components/drivers_nrf/common \
   $(SDK_ROOT)/components/ble/ble_advertising \
@@ -91,7 +74,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/ble/ble_dtm \
   $(SDK_ROOT)/components/toolchain/cmsis/include \
   $(SDK_ROOT)/components/ble/ble_services/ble_rscs_c \
-  $(SDK_ROOT)/components/drivers_nrf/uart \
   $(SDK_ROOT)/components/ble/common \
   $(SDK_ROOT)/components/ble/ble_services/ble_lls \
   $(SDK_ROOT)/components/drivers_nrf/wdt \
@@ -105,6 +87,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/external/segger_rtt \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc \
   $(SDK_ROOT)/components/drivers_nrf/hal \
+  $(SDK_ROOT)/components/drivers_nrf/uart \
   $(SDK_ROOT)/components/ble/ble_services/ble_nus_c \
   $(SDK_ROOT)/components/drivers_nrf/rtc \
   $(SDK_ROOT)/components/ble/ble_services/ble_ias \
@@ -121,7 +104,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/drivers_nrf/timer \
   $(SDK_ROOT)/components/libraries/util \
   $(SDK_ROOT)/components/drivers_nrf/pwm \
-  ../config \
   $(SDK_ROOT)/components/libraries/csense_drv \
   $(SDK_ROOT)/components/libraries/csense \
   $(SDK_ROOT)/components/drivers_nrf/rng \
@@ -178,6 +160,7 @@ CFLAGS += -DSOFTDEVICE_PRESENT
 CFLAGS += -DBOARD_PCA10028
 CFLAGS += -D__HEAP_SIZE=0
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
+CFLAGS += -DNRF_SD_BLE_API_VERSION=2
 CFLAGS += -DS130
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs
@@ -197,6 +180,7 @@ ASMFLAGS += -DSOFTDEVICE_PRESENT
 ASMFLAGS += -DBOARD_PCA10028
 ASMFLAGS += -D__HEAP_SIZE=0
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
+ASMFLAGS += -DNRF_SD_BLE_API_VERSION=2
 ASMFLAGS += -DSWI_DISABLE0
 ASMFLAGS += -DS130
 
