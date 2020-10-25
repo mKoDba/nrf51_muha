@@ -36,6 +36,11 @@
 #define MDK_MINOR_VERSION   11
 #define MDK_MICRO_VERSION   1
 
+// added by mario.kodba 22.10.2020.
+#include "nrf51.h"
+#include "nrf51_bitfields.h"
+#include "nrf51_deprecated.h"
+
 /* Redefine "old" too-generic name NRF52 to NRF52832_XXAA to keep backwards compatibility. */
 #if defined (NRF52)
     #ifndef NRF52832_XXAA

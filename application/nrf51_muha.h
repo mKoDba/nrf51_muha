@@ -17,8 +17,9 @@
  *                              DATA STRUCTURES
  ******************************************************************************/
 typedef enum ERR_ENUM {
-    ERR_NONE            = 0u,
-    ERR_INIT_FAIL       = 1u
+    ERR_NONE                = 0u,
+    ERR_DRV_SPI_INIT_FAIL   = 1u,
+    ERR_DRV_TIMER_INIT_FAIL = 2u
 } ERR_E;
 
 /*******************************************************************************

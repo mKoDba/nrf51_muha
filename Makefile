@@ -15,18 +15,21 @@ SRC_FILES += \
   $(PROJ_DIR)/application/nrf51_muha.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/config/nrf_drivers/cfg_nrf_drv_spi.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error_weak.c \
   $(PROJ_DIR)/SDK_components/libraries/util/nrf_assert.c \
   $(PROJ_DIR)/SDK_components/libraries/util/sdk_errors.c \
   $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master/nrf_drv_spi.c \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/common/nrf_drv_common.c \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/timer/nrf_drv_timer.c \
+  $(PROJ_DIR)/SDK_components/toolchain/gcc/gcc_startup_nrf51.S \
+  $(PROJ_DIR)/SDK_components/toolchain/system_nrf51.c \
   $(PROJ_DIR)/segger_rtt/RTT_Syscalls_GCC.c \
   $(PROJ_DIR)/segger_rtt/SEGGER_RTT_printf.c \
   $(PROJ_DIR)/segger_rtt/SEGGER_RTT.c \
   $(PROJ_DIR)/segger_rtt/nrf_log_backend_serial.c \
   $(PROJ_DIR)/segger_rtt/nrf_log_frontend.c \
-  $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.S \
-  $(SDK_ROOT)/components/toolchain/system_nrf51.c \
   $(SDK_ROOT)/components/libraries/timer/app_timer.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/crc16/crc16.c \
@@ -46,10 +49,18 @@ INC_FOLDERS += \
   $(PROJ_DIR)/application/bsp \
   $(PROJ_DIR)/application/config \
   $(PROJ_DIR)/application/config/bsp \
+  $(PROJ_DIR)/application/config/nrf_drivers \
   $(PROJ_DIR)/SDK_components/libraries/util \
   $(PROJ_DIR)/SDK_components/device \
   $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/timer \
   $(PROJ_DIR)/SDK_components/nrf_drivers/hal \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/common \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/delay \
+  $(PROJ_DIR)/SDK_components/toolchain \
+  $(PROJ_DIR)/SDK_components/toolchain/cmsis/include \
+  $(PROJ_DIR)/SDK_components/softdevice/headers \
+  $(PROJ_DIR)/SDK_components/softdevice/headers/nrf51 \
   $(SDK_ROOT)/components/drivers_nrf/comp \
   $(SDK_ROOT)/components/drivers_nrf/twi_master \
   $(SDK_ROOT)/components/ble/ble_services/ble_ancs_c \
@@ -65,14 +76,12 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/fstorage \
   $(SDK_ROOT)/components/drivers_nrf/i2s \
   $(SDK_ROOT)/components/boards \
-  $(SDK_ROOT)/components/drivers_nrf/common \
   $(SDK_ROOT)/components/ble/ble_advertising \
   $(SDK_ROOT)/components/drivers_nrf/adc \
   $(SDK_ROOT)/components/ble/ble_services/ble_bas_c \
   $(SDK_ROOT)/components/ble/ble_services/ble_hrs_c \
   $(SDK_ROOT)/components/libraries/queue \
   $(SDK_ROOT)/components/ble/ble_dtm \
-  $(SDK_ROOT)/components/toolchain/cmsis/include \
   $(SDK_ROOT)/components/ble/ble_services/ble_rscs_c \
   $(SDK_ROOT)/components/ble/common \
   $(SDK_ROOT)/components/ble/ble_services/ble_lls \
@@ -86,7 +95,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/mem_manager \
   $(SDK_ROOT)/external/segger_rtt \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc \
-  $(SDK_ROOT)/components/drivers_nrf/hal \
   $(SDK_ROOT)/components/drivers_nrf/uart \
   $(SDK_ROOT)/components/ble/ble_services/ble_nus_c \
   $(SDK_ROOT)/components/drivers_nrf/rtc \
@@ -99,10 +107,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/scheduler \
   $(SDK_ROOT)/components/ble/ble_services/ble_lbs \
   $(SDK_ROOT)/components/ble/ble_services/ble_hts \
-  $(SDK_ROOT)/components/drivers_nrf/delay \
   $(SDK_ROOT)/components/libraries/crc16 \
-  $(SDK_ROOT)/components/drivers_nrf/timer \
-  $(SDK_ROOT)/components/libraries/util \
   $(SDK_ROOT)/components/drivers_nrf/pwm \
   $(SDK_ROOT)/components/libraries/csense_drv \
   $(SDK_ROOT)/components/libraries/csense \
@@ -118,7 +123,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/timer \
   $(SDK_ROOT)/components/drivers_nrf/power \
   $(SDK_ROOT)/components/libraries/usbd/config \
-  $(SDK_ROOT)/components/toolchain \
   $(SDK_ROOT)/components/libraries/led_softblink \
   $(SDK_ROOT)/components/drivers_nrf/qdec \
   $(SDK_ROOT)/components/ble/ble_services/ble_cts_c \
@@ -164,7 +168,7 @@ CFLAGS += -DNRF_SD_BLE_API_VERSION=2
 CFLAGS += -DS130
 CFLAGS += -mcpu=cortex-m0
 CFLAGS += -mthumb -mabi=aapcs
-CFLAGS += -Wall -Werror -O0 -g3
+CFLAGS += -Wall -Wno-error -O0 -g3
 CFLAGS += -mfloat-abi=soft
 # keep every function in separate section, this allows linker to discard unused ones
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing

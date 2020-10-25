@@ -1189,13 +1189,13 @@
 // <e> PERIPHERAL_RESOURCE_SHARING_ENABLED - nrf_drv_common - Peripheral drivers common module
 //==========================================================
 #ifndef PERIPHERAL_RESOURCE_SHARING_ENABLED
-#define PERIPHERAL_RESOURCE_SHARING_ENABLED 0
+#define PERIPHERAL_RESOURCE_SHARING_ENABLED 1
 #endif
 #if  PERIPHERAL_RESOURCE_SHARING_ENABLED
 // <e> COMMON_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef COMMON_CONFIG_LOG_ENABLED
-#define COMMON_CONFIG_LOG_ENABLED 0
+#define COMMON_CONFIG_LOG_ENABLED 1
 #endif
 #if  COMMON_CONFIG_LOG_ENABLED
 // <o> COMMON_CONFIG_LOG_LEVEL  - Default Severity level
@@ -2340,7 +2340,7 @@
  
 
 #ifndef TIMER0_ENABLED
-#define TIMER0_ENABLED 0
+#define TIMER0_ENABLED 1
 #endif
 
 // <q> TIMER1_ENABLED  - Enable TIMER1 instance

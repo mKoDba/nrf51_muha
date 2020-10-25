@@ -9,9 +9,14 @@
  *                              INCLUDE FILES
  ******************************************************************************/
 #include <stddef.h>
+
 #include "SEGGER_RTT.h"
 #include "nrf_gpio.h"
+#include "nrf_drv_spi.h"
+#include "nrf_error.h"
+
 #include "nrf51_muha.h"
+#include "cfg_nrf_drv_spi.h"
 #include "cfg_bsp_ecg_ADS1192.h"
 #include "cfg_nrf51_muha_pinout.h"
 
@@ -47,7 +52,7 @@ static void NRF51_MUHA_initGpio() {
 }
 
 /*******************************************************************************
- * @brief Function initializes NRF51422 drivers.
+ * @brief Function initializes NRF51422 peripherals drivers.
  ******************************************************************************
  * @param [out] *outErr - error parameter.
  ******************************************************************************
@@ -56,9 +61,28 @@ static void NRF51_MUHA_initGpio() {
  ******************************************************************************/
 static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
+    ERR_E drvInitErr = ERR_NONE;
+    ret_code_t spiInitErr;
+
+    // initialize TIMER0 instance
+//    timerInitErr = nrf_drv_timer_init(&timer0Instance, &timer0Config, &timer0EventHandler);
+//    if(timerInitErr != NRF_SUCCESS) {
+//        drvInitErr = ERR_DRV_TIMER_INIT_FAIL;
+//    }
+
+    // initialize SPI0 instance for ECG
+    // if passed handler function, nrf_drv_spi_transfer returns immediately (NON-BLOCKING)
+    spiInitErr = nrf_drv_spi_init(&spi0Instance, &spi0Config, &spiEventHandler);
+    if(spiInitErr != NRF_SUCCESS) {
+        drvInitErr = ERR_DRV_SPI_INIT_FAIL;
+    }
+
+    if(drvInitErr != ERR_NONE) {
+        // init some driver
+    }
 
     if(outErr != NULL) {
-
+        *outErr = drvInitErr;
     }
 }
 
@@ -101,11 +125,13 @@ void NRF51_MUHA_init(ERR_E *outErr) {
     // initialize GPIOs
     NRF51_MUHA_initGpio();
 
-    // initialize MCU drivers
+    // initialize NRF peripheral drivers
     NRF51_MUHA_initDrivers(&localErr);
 
-    // initialize BSP components
-    NRF51_MUHA_initBsp(&localErr);
+    if(localErr == ERR_NONE) {
+        // initialize BSP components
+        NRF51_MUHA_initBsp(&localErr);
+    }
 
     if(outErr != NULL) {
         *outErr = localErr;

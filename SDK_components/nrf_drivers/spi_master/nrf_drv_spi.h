@@ -22,7 +22,7 @@
 
 #include "nordic_common.h"
 #include "sdk_config.h"
-#include "nrf_peripherals.h"
+#include "nrf51422_peripherals.h"
 #include "nrf_spi.h"
 #ifdef SPIM_PRESENT
 #include "nrf_spim.h"

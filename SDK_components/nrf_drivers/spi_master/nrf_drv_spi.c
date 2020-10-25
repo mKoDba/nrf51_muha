@@ -20,6 +20,7 @@
 #include "nrf_gpio.h"
 #include "nrf_assert.h"
 #include "app_util_platform.h"
+#include "nrf_error.h"
 
 #define NRF_LOG_MODULE_NAME "SPI"
 

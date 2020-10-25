@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "nrf_peripherals.h"
+#include "nrf51422_peripherals.h"
 #include "nrf.h"
 #include "nrf_assert.h"
 
@@ -73,7 +73,7 @@ extern "C" {
  * @brief Macro for getting the number of capture/compare channels available
  *        in a given timer instance.
  */
-#define NRF_TIMER_CC_CHANNEL_COUNT(id)  CONCAT_3(TIMER, id, _CC_NUM)
+#define NRF_TIMER_CC_CHANNEL_COUNT(id)  CONCAT_3(NRF_TIMER, _CC_CHANNEL, id)
 
 /**
  * @brief Timer tasks.
