@@ -12,6 +12,7 @@
  *                              INCLUDE FILES
  ******************************************************************************/
 #include <stdint.h>
+#include <stdbool.h>
 #include "nrf_drv_spi.h"
 /*******************************************************************************
  *                              ENUMERATIONS
@@ -83,19 +84,19 @@ typedef union BSP_ECG_ADS1192_chXsetReg_UNION {
 } BSP_ECG_ADS1192_chXsetReg_U;
 
 
-
 //! ECG ADS1192 driver configuration structure
 typedef struct BSP_ECG_ADS1192_config_STRUCT {
-    nrf_drv_spi_t *spiInstance;     //!< SPI master driver instance structure
-    nrf_drv_spi_config_t *spiConfig;//!< SPI master driver instance configuration
+    nrf_drv_spi_t        *spiInstance;  //!< SPI master driver instance structure
+    nrf_drv_spi_config_t *spiConfig;    //!< SPI master driver instance configuration
 
 } BSP_ECG_ADS1192_config_S;
+
 
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
 
-    uint8_t isInitialized;                      //!< Is device initialized
+    bool isInitialized;                         //!< Is device initialized
 } BSP_ECG_ADS1192_device_S;
 /*******************************************************************************
  *                              GLOBAL VARIABLES

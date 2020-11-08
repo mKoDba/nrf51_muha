@@ -54,7 +54,7 @@ static void NRF51_MUHA_initGpio() {
 /*******************************************************************************
  * @brief Function initializes NRF51422 peripherals drivers.
  ******************************************************************************
- * @param [out] *outErr - error parameter.
+ * @param [in, out] *outErr - error parameter.
  ******************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
@@ -78,7 +78,7 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
     }
 
     if(drvInitErr != ERR_NONE) {
-        // init some driver
+        // init some other driver
     }
 
     if(outErr != NULL) {
@@ -89,7 +89,7 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 /*******************************************************************************
  * @brief Function initializes BSP components used by NRF51422.
  ******************************************************************************
- * @param [out] *outErr - error parameter.
+ * @param [in, out] *outErr - error parameter.
  ******************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
@@ -120,16 +120,16 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 
     ERR_E localErr = ERR_NONE;
 
-    SEGGER_RTT_printf(0, "Initializing nRF51...\n");
+     SEGGER_RTT_printf(0, "Initializing nRF51...\n");
 
-    // initialize GPIOs
+    // initialize GPIOs, it sets LD1
     NRF51_MUHA_initGpio();
 
     // initialize NRF peripheral drivers
     NRF51_MUHA_initDrivers(&localErr);
 
+    // initialize BSP components
     if(localErr == ERR_NONE) {
-        // initialize BSP components
         NRF51_MUHA_initBsp(&localErr);
     }
 
