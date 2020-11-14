@@ -34,7 +34,7 @@ nrf_drv_spi_config_t spi0Config = {
         .orc            = 0xFF,         //!< Over-run character.
                         /*!< This character is used when all bytes from the TX buffer are sent,
                              but the transfer continues due to RX. */
-        .frequency      = NRF_DRV_SPI_FREQ_500K,           //!< SPI frequency.
+        .frequency      = NRF_DRV_SPI_FREQ_1M,           //!< SPI frequency.
         .mode           = NRF_DRV_SPI_MODE_1,              //!< SPI mode.
         .bit_order      = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST, //!< SPI bit order.
 };

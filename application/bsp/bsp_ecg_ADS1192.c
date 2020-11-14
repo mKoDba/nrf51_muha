@@ -20,15 +20,21 @@
 /*******************************************************************************
  *                              DEFINES
  ******************************************************************************/
+//! SPI constants
 #define BSP_ECG_ADS1192_SPI_OPCODE_SIZE         (2u)    //!< SPI command byte size
 #define BSP_ECG_ADS1192_SPI_READ_OP             (0x1u)  //!< SPI read command
 #define BSP_ECG_ADS1192_SPI_WRITE_OP            (0x40u) //!< SPI write command
 #define BSP_ECG_ADS1192_SPI_MSG_MAX_SIZE        (14u)   //!< Maximum SPI message size
-#define BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK   (8u)    //!< 4 tCLK time period to us
-#define BSP_ECG_ADS1192_INIT_WAIT_TIME_8_US     (8u)    //!< nRESET pin wait time
-#define BSP_ECG_ADS1192_INIT_WAIT_TIME_72_US    (72u)   //!< Reset command wait time
-#define BSP_ECG_ADS1192_INIT_WAIT_TIME_1000_MS  (1000000u) //!< 1000ms wait time
-#define BSP_ECG_ADS1192_INIT_WAIT_TIME_36_US    (36u)   //!< 18 * t_clk wait time
+
+//! Time constants
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK   (8u)    //!< 4 tCLK time period (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_18_TCLK  (36u)   //!< 18 tCLK time period (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_1_FMOD   (8u)    //!< 1 fMOD wait time (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_9_FMOD   (72u)   //!< 9 fMOD wait time (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_8_US     (8u)    //!< nRESET pin wait time (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_32_US    (32u)   //!< Internal oscillator wait time (us)
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_1_MS     (1000u) //!< 1ms wait time
+#define BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS   (200000u) //!< 200ms wait time
 
 //! ECG ADS1192 SPI commands
 #define BSP_ECG_ADS1192_SPI_WAKEUP              (0x02u) //!< Wake-up from standby mode
@@ -40,6 +46,11 @@
 #define BSP_ECG_ADS1192_SPI_RDATAC              (0x10u) //!< Read Data Continuous mode
 #define BSP_ECG_ADS1192_SPI_SDATAC              (0x11u) //!< Stop Read Data Continuous
 #define BSP_ECG_ADS1192_SPI_RDATA               (0x12u) //!< Read data by command
+
+//! ECG ADS1192 temperature constants
+#define BSP_ECG_ADS1192_TEMP_CONST_1            (168) //!< Temperature constant 1
+#define BSP_ECG_ADS1192_TEMP_CONST_2            (394) //!< Temperature constant 2
+#define BSP_ECG_ADS1192_TEMP_CONST_3            (25)  //!< Temperature constant 3
 
 //! ECG ADS1192 register addresses
 #define BSP_ECG_ADS1192_REG_ADDR_ID             (0x0u)  //!< ID Control register
@@ -99,6 +110,10 @@ static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
                                     BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
                                       BSP_ECG_ADS1192_err_E *outErr);
+static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice,
+                                              BSP_ECG_ADS1192_err_E *outErr);
+static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
+                                           BSP_ECG_ADS1192_err_E *outErr);
 
 /*******************************************************************************
  *                          PUBLIC FUNCTION DEFINITIONS
@@ -123,13 +138,11 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         inDevice->config = inConfig;
         inDevice->isInitialized = false;
 
-        // send reset impulse
-        BSP_ECG_ADS1192_initReset();
+        // internal oscillator start-up time
+        nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_32_US);
 
-        // reset device registers to default values
-        BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_RESET, &ecgErr);
-        // wait 9 * fMOD cycles for RESET command to finish executing
-        nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_72_US);
+        // send reset impulse
+        BSP_ECG_ADS1192_initReset(inDevice, &ecgErr);
 
         /* on power-up device defaults to Read Data Continous mode,
          * stop it to enable sending SPI commands */
@@ -137,15 +150,18 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         // wait 4 * tCLK after sending SDATAC command
         nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_8_US);
 
-        // set internal reference voltage
-        BSP_ECG_ADS1192_config2Reg_U conf2Reg = { .R = 0u };
-        conf2Reg.R = 0x50u;
+        // set internal reference voltage (2.42V)
+        BSP_ECG_ADS1192_config2Reg_U conf2Reg = { .R = 0x80u };
+        conf2Reg.B.pdbRefBuf = 1u;
         BSP_ECG_ADS1192_writeReg(inDevice,
                                  BSP_ECG_ADS1192_reg_CONFIG_2,
                                  1u,
                                  (uint8_t *) &conf2Reg,
                                  1u,
                                  &ecgErr);
+        // wait for reference voltage to settle
+        nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
+
         // set 500SPS, continuous conversion
         if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
             BSP_ECG_ADS1192_config1Reg_U conf1Reg = { .R = 0u };
@@ -157,6 +173,11 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
                                      1u,
                                      &ecgErr);
         }
+
+        BSP_ECG_ADS1192_updateTemperature(inDevice, &ecgErr);
+
+        BSP_ECG_ADS1192_readTestSignal(inDevice, &ecgErr);
+
         // set both channels to input short (offset measurements)
         if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
             uint8_t chRegs[2] = { 1u, 1u };
@@ -294,44 +315,21 @@ static void BSP_ECG_ADS1192_writeReg(BSP_ECG_ADS1192_device_S *inDevice,
     if((inDevice != NULL) && (inData != NULL)) {
         // format for write opcode: | 010r rrrr | 000n nnnn |
         // set first byte of opcode for write operation
-        opcode[0] = BSP_ECG_ADS1192_SPI_WRITE_OP | regAddr;
+        opcode[0] = (BSP_ECG_ADS1192_SPI_WRITE_OP | regAddr);
         // second byte represents number of registers we write to - 1
-        opcode[1] = inRegNumber - 1;
+        opcode[1] = inRegNumber - 1u;
 
-        if(spi0Config.frequency <= NRF_DRV_SPI_FREQ_500K ) {
-            /* when sending multi-byte commands, a 4 tCLK period must separate
-             * the end of one byte (or opcode) and the next */
+        uint8_t spiMsg[BSP_ECG_ADS1192_SPI_MSG_MAX_SIZE] = { 0u };
+        // 2 bytes for opcode + input data length
+        uint8_t msgSize = inDataLength + BSP_ECG_ADS1192_SPI_OPCODE_SIZE;
 
-            // leave RX buffer empty, function allows it
-            ret_code = nrf_drv_spi_transfer(&spi0Instance, &opcode[0], 1u, NULL, 0u);
-            nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK);
-
-            if(ret_code == NRF_SUCCESS) {
-                ret_code = nrf_drv_spi_transfer(&spi0Instance, &opcode[1], 1u, NULL, 0u);
-                nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK);
-            }
-
-            // if opcodes sent successfully, send data bytes
-            if(ret_code == NRF_SUCCESS) {
-                for(uint8_t i = 0u; i<inDataLength; i++){
-                    ret_code = nrf_drv_spi_transfer(&spi0Instance, &inData[i], 1u, NULL, 0u);
-                    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK);
-                }
-            }
-        } else {
-            // for higher SCLK frequencies no need for delay between SPI transfer
-            uint8_t spiMsg[BSP_ECG_ADS1192_SPI_MSG_MAX_SIZE] = { 0u };
-            // 2 bytes for opcode + input data length
-            uint8_t msgSize = inDataLength + 2u;
-
-            // assemble SPI message
-            // OPCODE_1 | OPCODE_2 | DATA1 | DATA2 | DATA3 | ...
-            spiMsg[0] = opcode[0];
-            spiMsg[1] = opcode[1];
-            (void *) memcpy((uint8_t *) &(spiMsg[2]), inData, inDataLength);
-            // leave RX buffer empty, function allows it
-            ret_code = nrf_drv_spi_transfer(&spi0Instance, spiMsg, msgSize, NULL, 0u);
-        }
+        // assemble SPI message
+        // OPCODE_1 | OPCODE_2 | DATA1 | DATA2 | DATA3 | ...
+        spiMsg[0] = opcode[0];
+        spiMsg[1] = opcode[1];
+        (void *) memcpy((uint8_t *) &(spiMsg[2]), inData, inDataLength);
+        // leave RX buffer empty, function allows it
+        ret_code = nrf_drv_spi_transfer(&spi0Instance, spiMsg, msgSize, NULL, 0u);
 
         if(ret_code != NRF_SUCCESS) {
             ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
@@ -450,19 +448,154 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
 
     // set nRESET pin high
     nrf_gpio_pin_set(ECG_RST);
-    // wait 1s
-    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_1000_MS);
+    // wait 1s, according to datasheet power-up sequence
+    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
 
     /* hold nRESET low for 1 period of fMOD frequency,
      * according to datasheet, fMOD = 128kHz -> tMOD = 8us*/
     nrf_gpio_pin_clear(ECG_RST);
-    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_8_US);
+    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_1_FMOD);
 
     // set nRESET pin high again
     nrf_gpio_pin_set(ECG_RST);
 
     // wait 18 * tCLK, with fCLK = 512kHz -> tCLK = 2us
-    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_36_US);
+    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_18_TCLK);
+
+    // reset device registers to default values
+    BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_RESET, &ecgErr);
+    // wait 9 * fMOD cycles for RESET command to finish executing
+    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_9_FMOD);
+
+    if(outErr != NULL) {
+        *outErr = ecgErr;
+    }
+}
+
+/*******************************************************************************
+ * @brief Sets device MUX to read temperature from device sensor.
+ ******************************************************************************
+ * @param [in]  *inDevice    - device structure for ECG driver.
+ * @param [out] *outErr      - error parameter.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    13.11.2020
+ ******************************************************************************/
+static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice,
+                                              BSP_ECG_ADS1192_err_E *outErr) {
+
+    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    uint8_t outBuffer[6] = { 0u };
+
+    // set channel 2 for temp measurement
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        BSP_ECG_ADS1192_chXsetReg_U chReg = { .R = 0u };
+        // set PGA to 1x
+        chReg.B.pga = 1u;
+        chReg.B.mux = 4u;
+        BSP_ECG_ADS1192_writeReg(inDevice,
+                                 BSP_ECG_ADS1192_reg_CH2_SET,
+                                 1u,
+                                 (uint8_t *) &chReg,
+                                 1u,
+                                 &ecgErr);
+    }
+
+    // enable calibrating PGA
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        uint8_t calib = 0x80u;
+        BSP_ECG_ADS1192_writeReg(inDevice,
+                                 BSP_ECG_ADS1192_reg_MISC_2,
+                                 1u,
+                                 (uint8_t *) &calib,
+                                 1u,
+                                 &ecgErr);
+    }
+
+    // calibrate PGA
+    BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_OFFSETCAL, &ecgErr);
+
+    // start reading data
+    BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_RDATA, &ecgErr);
+
+    // read data shifted out from device
+    // 16 status bits + 2 channels x 16 bits
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        BSP_ECG_ADS1192_readData(inDevice, 6, &outBuffer[0], &ecgErr);
+    }
+    nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK);
+
+    int16_t readVal = outBuffer[4] << 8u;
+    readVal = readVal | outBuffer[5];
+    // set device temperature
+    inDevice->temperature = (((readVal - BSP_ECG_ADS1192_TEMP_CONST_1) / BSP_ECG_ADS1192_TEMP_CONST_2)
+            + BSP_ECG_ADS1192_TEMP_CONST_3);
+
+    if(outErr != NULL) {
+        *outErr = ecgErr;
+    }
+}
+
+/*******************************************************************************
+ * @brief
+ ******************************************************************************
+ * @param [in]  *inDevice    - device structure for ECG driver.
+ * @param [out] *outErr      - error parameter.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    13.11.2020
+ ******************************************************************************/
+static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
+                                           BSP_ECG_ADS1192_err_E *outErr) {
+
+    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    uint8_t outBuffer[6] = { 0 };
+
+    BSP_ECG_ADS1192_config2Reg_U conf2Reg = { .R = 0u };
+    conf2Reg.R = 0xA3u;
+    BSP_ECG_ADS1192_writeReg(inDevice,
+                             BSP_ECG_ADS1192_reg_CONFIG_2,
+                             1u,
+                             (uint8_t *) &conf2Reg,
+                             1u,
+                             &ecgErr);
+
+    uint8_t chRegs[2] = { 0x05u, 0x05u };
+    // set both channels to test signal
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        BSP_ECG_ADS1192_writeReg(inDevice,
+                                 BSP_ECG_ADS1192_reg_CH1_SET,
+                                 2u,
+                                 &chRegs[0],
+                                 2u,
+                                 &ecgErr);
+    }
+
+    // enable calibrating PGA
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        uint8_t calib = 0x80u;
+        BSP_ECG_ADS1192_writeReg(inDevice,
+                                 BSP_ECG_ADS1192_reg_MISC_2,
+                                 1u,
+                                 (uint8_t *) &calib,
+                                 1u,
+                                 &ecgErr);
+    }
+
+    // calibrate PGA
+    BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_OFFSETCAL, &ecgErr);
+
+    // issue read command
+    BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_RDATA, &ecgErr);
+
+    // read data shifted out from device
+    // 16 status bits + 2 channels x 16 bits
+    if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+        BSP_ECG_ADS1192_readData(inDevice, 6, &outBuffer[0], &ecgErr);
+        for(uint8_t i = 0u; i<6; i++) {
+            SEGGER_RTT_printf(0, "%x\n", outBuffer[i]);
+        }
+    }
 
     if(outErr != NULL) {
         *outErr = ecgErr;

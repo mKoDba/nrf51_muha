@@ -95,6 +95,7 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
+    int16_t temperature;                        //!< Temperature of device
 
     bool isInitialized;                         //!< Is device initialized
 } BSP_ECG_ADS1192_device_S;
