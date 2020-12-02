@@ -37,6 +37,7 @@ int main(void) {
         // error handling
     }
 
+    // should not get to here
     while(1) {
         ;
     }

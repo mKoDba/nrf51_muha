@@ -87,7 +87,7 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 }
 
 /*******************************************************************************
- * @brief Function initializes BSP components used by NRF51422.
+ * @brief Function initializes BSP components used by NRF51422 on MUHA board.
  ******************************************************************************
  * @param [in, out] *outErr - error parameter.
  ******************************************************************************
@@ -120,7 +120,7 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 
     ERR_E localErr = ERR_NONE;
 
-     SEGGER_RTT_printf(0, "Initializing nRF51...\n");
+    SEGGER_RTT_printf(0, "Initializing nRF51...\n");
 
     // initialize GPIOs, it sets LD1
     NRF51_MUHA_initGpio();
@@ -147,9 +147,11 @@ void NRF51_MUHA_init(ERR_E *outErr) {
  * @date    18.10.2020.
  ******************************************************************************/
 void NRF51_MUHA_start() {
-
+    // TODO: [mario.kodba 29.11.2020.] Add RTOS start here and remove loop?
+    while(true){
+        ;
+    }
 }
-
 
 /*******************************************************************************
  *                          END OF FILE
