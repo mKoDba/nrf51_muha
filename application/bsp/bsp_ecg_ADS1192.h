@@ -18,26 +18,26 @@
  *                              ENUMERATIONS
  ******************************************************************************/
 typedef enum BSP_ECG_ADS1192_err_ENUM {
-    BSP_ECG_ADS1192_err_NONE            = 0u,
-    BSP_ECG_ADS1192_err_NULL_PARAM,
-    BSP_ECG_ADS1192_err_INIT,
-    BSP_ECG_ADS1192_err_SPI_READ_WRITE,
-    BSP_ECG_ADS1192_err_RLD_OFF
+    BSP_ECG_ADS1192_err_NONE            = 0u,   //!< No error
+    BSP_ECG_ADS1192_err_NULL_PARAM,             //!< NULL parameter error
+    BSP_ECG_ADS1192_err_INIT,                   //!< Error on initialization
+    BSP_ECG_ADS1192_err_SPI_READ_WRITE,         //!< SPI operation error
+    BSP_ECG_ADS1192_err_RLD_OFF                 //!< RLD off error
 } BSP_ECG_ADS1192_err_E;
 
 typedef enum BSP_ECG_ADS1192_reg_ENUM {
-    BSP_ECG_ADS1192_reg_ID          = 0u,
-    BSP_ECG_ADS1192_reg_CONFIG_1    = 1u,
-    BSP_ECG_ADS1192_reg_CONFIG_2    = 2u,
-    BSP_ECG_ADS1192_reg_LOFF        = 3u,
-    BSP_ECG_ADS1192_reg_CH1_SET     = 4u,
-    BSP_ECG_ADS1192_reg_CH2_SET     = 5u,
-    BSP_ECG_ADS1192_reg_RLD_SENS    = 6u,
-    BSP_ECG_ADS1192_reg_LOFF_SENS   = 7u,
-    BSP_ECG_ADS1192_reg_LOFF_STAT   = 8u,
-    BSP_ECG_ADS1192_reg_MISC_1      = 9u,
-    BSP_ECG_ADS1192_reg_MISC_2      =10u,
-    BSP_ECG_ADS1192_reg_GPIO        =11u,
+    BSP_ECG_ADS1192_reg_ID          = 0u,       //!< ADS1192 ID register
+    BSP_ECG_ADS1192_reg_CONFIG_1    = 1u,       //!< ADS1192 CONFIG 1 register
+    BSP_ECG_ADS1192_reg_CONFIG_2    = 2u,       //!< ADS1192 CONFIG 2 register
+    BSP_ECG_ADS1192_reg_LOFF        = 3u,       //!< ADS1192 LOFF register
+    BSP_ECG_ADS1192_reg_CH1_SET     = 4u,       //!< ADS1192 CH1 register
+    BSP_ECG_ADS1192_reg_CH2_SET     = 5u,       //!< ADS1192 CH2 register
+    BSP_ECG_ADS1192_reg_RLD_SENS    = 6u,       //!< ADS1192 RLD_SENS register
+    BSP_ECG_ADS1192_reg_LOFF_SENS   = 7u,       //!< ADS1192 LOFF_SENS register
+    BSP_ECG_ADS1192_reg_LOFF_STAT   = 8u,       //!< ADS1192 LOFF_STAT register
+    BSP_ECG_ADS1192_reg_MISC_1      = 9u,       //!< ADS1192 MISC 1 register
+    BSP_ECG_ADS1192_reg_MISC_2      =10u,       //!< ADS1192 MISC 2 register
+    BSP_ECG_ADS1192_reg_GPIO        =11u,       //!< ADS1192 GPIO register
 
     BSP_ECG_ADS1192_reg_COUNT
 } BSP_ECG_ADS1192_reg_E;
@@ -45,43 +45,43 @@ typedef enum BSP_ECG_ADS1192_reg_ENUM {
 /*******************************************************************************
  *                              DATA STRUCTURES
  ******************************************************************************/
-//!< Configuration Register 1 - configures both ADC channels sample rate.
+//! Configuration Register 1 - configures both ADC channels sample rate.
 typedef union BSP_ECG_ADS1192_config1Reg_UNION {
-    uint8_t R;
+    uint8_t R;                      //!< CONFIG 1 register value
     struct {
+       uint8_t  dr0         : 1;    //!< DR[2:0] bits determine both channel 1
+       uint8_t  dr1         : 1;    //!< and channel 2 over-sampling ratio
+       uint8_t  dr2         : 1;
+       uint8_t              : 4;    //!< Reserved - must be set to 0
        uint8_t  singleShot  : 1;    /*!< Sets conversion mode
                                          [ 0 -> Continuous mode (default) ]
                                          [ 1 -> Single-shot mode ] */
-       uint8_t              : 4;    //!< Reserved - must be set to 0
-       uint8_t  dr2         : 1;    //!< DR[2:0] bits determine both channel 1
-       uint8_t  dr1         : 1;    //!< and channel 2 over-sampling ratio
-       uint8_t  dr0         : 1;
-    } B;
+    } B;                            //!< CONFIG 1 register bits
 } BSP_ECG_ADS1192_config1Reg_U;
 
-//!< Configuration Register 2 - configures test signal, clock, reference, LOFF buffer.
+//! Configuration Register 2 - configures test signal, clock, reference, LOFF buffer.
 typedef union BSP_ECG_ADS1192_config2Reg_UNION {
-    uint8_t R;
+    uint8_t R;                      //!< CONFIG 2 register value
     struct {
-       uint8_t              : 1;    //!< Reserved - must be set to 1
-       uint8_t  pdbLoffComp : 1;    //!< Lead-off comparator power-down
-       uint8_t  pdbRefBuf   : 1;    //!< Reference buffer power-down
-       uint8_t  vRef4V      : 1;    //!< Enables 4V reference
-       uint8_t  clkEn       : 1;    //!< CLK connection
-       uint8_t              : 1;    //!< Reserved - must be set to 0
-       uint8_t  intTest     : 1;    //!< Test signal selection
        uint8_t  testFreq    : 1;    //!< Test signal frequency
-    } B;
+       uint8_t  intTest     : 1;    //!< Test signal selection
+       uint8_t              : 1;    //!< Reserved - must be set to 0
+       uint8_t  clkEn       : 1;    //!< CLK connection
+       uint8_t  vRef4V      : 1;    //!< Enables 4V reference
+       uint8_t  pdbRefBuf   : 1;    //!< Reference buffer power-down
+       uint8_t  pdbLoffComp : 1;    //!< Lead-off comparator power-down
+       uint8_t              : 1;    //!< Reserved - must be set to 1
+    } B;                            //!< CONFIG 2 register bits
 } BSP_ECG_ADS1192_config2Reg_U;
 
-//!< Channel 1 and 2 settings - configures power mode, PGA, MUX settings.
+//! Channel 1 and 2 settings - configures power mode, PGA, MUX settings.
 typedef union BSP_ECG_ADS1192_chXsetReg_UNION {
-    uint8_t R;
+    uint8_t R;                      //!< Channel X register value
     struct {
-       uint8_t  powerDown   : 1;    //!< Channel X power-down
-       uint8_t  pga         : 3;    //!< Channel X PGA gain setting
        uint8_t  mux         : 4;    //!< Channel X input selection
-    } B;
+       uint8_t  pga         : 3;    //!< Channel X PGA gain setting
+       uint8_t  powerDown   : 1;    //!< Channel X power-down
+    } B;                            //!< Channel X register bits
 } BSP_ECG_ADS1192_chXsetReg_U;
 
 
