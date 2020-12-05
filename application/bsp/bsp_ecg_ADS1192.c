@@ -165,29 +165,33 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         // reset the device on start-up
         BSP_ECG_ADS1192_initReset(inDevice, &ecgErr);
 
-        /* on power-up device defaults to Read Data Continous mode,
-         * stop it to enable sending SPI commands */
-        BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_SDATAC, &ecgErr);
-        // wait 4 * tCLK after sending SDATAC command
-        nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
+        if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+            /* on power-up device defaults to Read Data Continous mode,
+             * stop it to enable sending SPI commands */
+            BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_SDATAC, &ecgErr);
+            // wait 4 * tCLK after sending SDATAC command
+            nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
+        }
 
-        // set internal reference voltage (2.42V)
-        BSP_ECG_ADS1192_config2Reg_U conf2 = { .R = 0x80u };
-        conf2.B.pdbRefBuf = 1u;
-        BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                       BSP_ECG_ADS1192_reg_CONFIG_2,
-                                       (uint8_t *) &conf2,
-                                       &ecgErr);
-        // wait for reference voltage to settle
-        nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
+        if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
+            // set internal reference voltage (2.42V)
+            BSP_ECG_ADS1192_config2Reg_U conf2 = { .R = 0x80u };
+            conf2.B.pdbRefBuf = 1u;
+            BSP_ECG_ADS1192_writeSingleReg(inDevice,
+                    BSP_ECG_ADS1192_reg_CONFIG_2,
+                    (uint8_t *) &conf2,
+                    &ecgErr);
+            // wait for reference voltage to settle
+            nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
+        }
 
         // set 500SPS, continuous conversion
         if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
             uint8_t conf1Reg = 0x02u;
             BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                           BSP_ECG_ADS1192_reg_CONFIG_1,
-                                           (uint8_t *) &conf1Reg,
-                                           &ecgErr);
+                    BSP_ECG_ADS1192_reg_CONFIG_1,
+                    (uint8_t *) &conf1Reg,
+                    &ecgErr);
         }
 
         // update temperature
@@ -308,10 +312,10 @@ static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
         ecgErr = BSP_ECG_ADS1192_err_NULL_PARAM;
     } else {
         ret_code = nrf_drv_spi_transfer(inDevice->config->spiInstance,
-                                        &inSpiCmd,
-                                        txBufferLen,
-                                        NULL,
-                                        rxBufferLen);
+                           &inSpiCmd,
+                           txBufferLen,
+                           NULL,
+                           rxBufferLen);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
@@ -356,8 +360,11 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         opcode[2] = *inData;
 
         // leave RX buffer empty, function allows it
-        ret_code = nrf_drv_spi_transfer(&spi0Instance, &(opcode[0]), txBufferLen, NULL, rxBufferLen);
-
+        ret_code = nrf_drv_spi_transfer(inDevice->config->spiInstance,
+                           &opcode[0],
+                           txBufferLen,
+                           NULL,
+                           rxBufferLen);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
@@ -404,12 +411,11 @@ static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         opcode[1] = BSP_ECG_ADS1192_SPI_SINGLE_REG;
 
         // start SPI transfer
-        ret_code = nrf_drv_spi_transfer(&spi0Instance,
-                                        &(opcode[0]),
-                                        txBufferLen,
-                                        &(outData[0]),
-                                        rxBufferLen);
-
+        ret_code = nrf_drv_spi_transfer(inDevice->config->spiInstance,
+                           &opcode[0],
+                           txBufferLen,
+                           &outData[0],
+                           rxBufferLen);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
@@ -453,11 +459,11 @@ static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
 
     if((inDevice != NULL) && (outData != NULL)) {
         // start SPI transfer
-        ret_code = nrf_drv_spi_transfer(&spi0Instance,
-                                        NULL,
-                                        txBufferLen,
-                                        outData,
-                                        rxBufferLen);
+        ret_code = nrf_drv_spi_transfer(inDevice->config->spiInstance,
+                           NULL,
+                           txBufferLen,
+                           outData,
+                           rxBufferLen);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
@@ -535,18 +541,18 @@ static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice
         chReg.B.pga = 1u;
         chReg.B.mux = 4u;
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_CH2_SET,
-                                 (uint8_t *) &chReg,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_CH2_SET,
+                (uint8_t *) &chReg,
+                &ecgErr);
     }
 
     // enable calibrating PGA
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         uint8_t calib = 0x80u;
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_MISC_2,
-                                 (uint8_t *) &calib,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_MISC_2,
+                (uint8_t *) &calib,
+                &ecgErr);
     }
 
     // calibrate PGA
@@ -573,18 +579,18 @@ static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         BSP_ECG_ADS1192_chXsetReg_U chReg = { .R = 0u };
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_CH2_SET,
-                                 (uint8_t *) &chReg,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_CH2_SET,
+                (uint8_t *) &chReg,
+                &ecgErr);
     }
 
     // enable calibrating PGA
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         uint8_t calib = 0x80u;
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_MISC_2,
-                                 (uint8_t *) &calib,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_MISC_2,
+                (uint8_t *) &calib,
+                &ecgErr);
     }
 
     // calibrate PGA
@@ -619,9 +625,9 @@ static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
     conf2Reg.B.intTest = 1u;
     conf2Reg.B.testFreq = 1u;
     BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                             BSP_ECG_ADS1192_reg_CONFIG_2,
-                             (uint8_t *) &conf2Reg,
-                             &ecgErr);
+            BSP_ECG_ADS1192_reg_CONFIG_2,
+            (uint8_t *) &conf2Reg,
+            &ecgErr);
     //TODO: [mario.kodba 05-12-2020] check if this is needed
     // wait for reference voltage to settle
     nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
@@ -631,24 +637,24 @@ static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
     // set both channels to output test signal
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_CH1_SET,
-                                 (uint8_t *) &chReg,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_CH1_SET,
+                (uint8_t *) &chReg,
+                &ecgErr);
     }
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_CH2_SET,
-                                 (uint8_t *) &chReg,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_CH2_SET,
+                (uint8_t *) &chReg,
+                &ecgErr);
     }
 
     // enable calibrating PGA
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         uint8_t calib = 0x80u;
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                 BSP_ECG_ADS1192_reg_MISC_2,
-                                 (uint8_t *) &calib,
-                                 &ecgErr);
+                BSP_ECG_ADS1192_reg_MISC_2,
+                (uint8_t *) &calib,
+                &ecgErr);
     }
 
     // calibrate PGA
@@ -699,7 +705,10 @@ static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
 
     // set Lead-off comparator threshold
     uint8_t loffReg = BSP_ECG_ADS1192_LEAD_OFF_THRESHOLD;
-    BSP_ECG_ADS1192_writeSingleReg(inDevice, BSP_ECG_ADS1192_reg_LOFF, &loffReg, &ecgErr);
+    BSP_ECG_ADS1192_writeSingleReg(inDevice,
+            BSP_ECG_ADS1192_reg_LOFF,
+            &loffReg,
+            &ecgErr);
 
     // configure Configuration 2 register for lead-off detection
     BSP_ECG_ADS1192_config2Reg_U conf2Reg = { .R = 0x80u };
@@ -707,9 +716,9 @@ static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
     conf2Reg.B.pdbRefBuf = 1u;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                       BSP_ECG_ADS1192_reg_CONFIG_2,
-                                       (uint8_t *) &conf2Reg,
-                                       &ecgErr);
+                BSP_ECG_ADS1192_reg_CONFIG_2,
+                (uint8_t *) &conf2Reg,
+                &ecgErr);
     }
     // wait for reference voltage to settle
     nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
@@ -717,7 +726,10 @@ static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
     // configure LOFF_SENS register - both channels P+ and N- for lead-off detection
     uint8_t loffSensReg = BSP_ECG_ADS1192_LEAD_OFF_BOTH_CHANNELS;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
-        BSP_ECG_ADS1192_writeSingleReg(inDevice, BSP_ECG_ADS1192_reg_LOFF_SENS, &loffSensReg, &ecgErr);
+        BSP_ECG_ADS1192_writeSingleReg(inDevice,
+                BSP_ECG_ADS1192_reg_LOFF_SENS,
+                &loffSensReg,
+                &ecgErr);
     }
 
 //    // configure RLD_SENS register - both channels P+ and N- for lead-off detection
@@ -735,7 +747,10 @@ static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
     uint8_t outData[10] = { 0u };
     uint8_t status;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
-        status = BSP_ECG_ADS1192_readSingleReg(inDevice, BSP_ECG_ADS1192_reg_LOFF_STAT, &(outData[0]), &ecgErr);
+        status = BSP_ECG_ADS1192_readSingleReg(inDevice,
+                         BSP_ECG_ADS1192_reg_LOFF_STAT,
+                         &outData[0],
+                         &ecgErr);
     }
 
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
@@ -774,9 +789,9 @@ static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
     conf2Reg.B.pdbRefBuf = 1u;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
         BSP_ECG_ADS1192_writeSingleReg(inDevice,
-                                       BSP_ECG_ADS1192_reg_CONFIG_2,
-                                       (uint8_t *) &conf2Reg,
-                                       &ecgErr);
+                BSP_ECG_ADS1192_reg_CONFIG_2,
+                (uint8_t *) &conf2Reg,
+                &ecgErr);
     }
     // wait for reference voltage to settle
     nrf_delay_us(BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS);
@@ -784,7 +799,10 @@ static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
     // configure RLD_SENS register - both channels P+ and N- for RLD-off detection
     uint8_t rldSensReg = BSP_ECG_ADS1192_RLD_OFF_BOTH_CHANNELS;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
-        BSP_ECG_ADS1192_writeSingleReg(inDevice, BSP_ECG_ADS1192_reg_RLD_SENS, &rldSensReg, &ecgErr);
+        BSP_ECG_ADS1192_writeSingleReg(inDevice,
+                BSP_ECG_ADS1192_reg_RLD_SENS,
+                &rldSensReg,
+                &ecgErr);
     }
 
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
@@ -796,7 +814,10 @@ static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
     uint8_t outData[10] = { 0u };
     uint8_t status;
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
-        status = BSP_ECG_ADS1192_readSingleReg(inDevice, BSP_ECG_ADS1192_reg_LOFF_STAT, &(outData[0]), &ecgErr);
+        status = BSP_ECG_ADS1192_readSingleReg(inDevice,
+                         BSP_ECG_ADS1192_reg_LOFF_STAT,
+                         &outData[0],
+                         &ecgErr);
     }
 
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
