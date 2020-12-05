@@ -13,6 +13,7 @@
  ******************************************************************************/
 #include <stdint.h>
 #include <stdbool.h>
+
 #include "nrf_drv_spi.h"
 /*******************************************************************************
  *                              ENUMERATIONS
@@ -22,6 +23,7 @@ typedef enum BSP_ECG_ADS1192_err_ENUM {
     BSP_ECG_ADS1192_err_NULL_PARAM,             //!< NULL parameter error
     BSP_ECG_ADS1192_err_INIT,                   //!< Error on initialization
     BSP_ECG_ADS1192_err_SPI_READ_WRITE,         //!< SPI operation error
+    BSP_ECG_ADS1192_err_LEAD_OFF,               //!< Channel 1 and 2 Lead-off error
     BSP_ECG_ADS1192_err_RLD_OFF                 //!< RLD off error
 } BSP_ECG_ADS1192_err_E;
 
@@ -84,14 +86,12 @@ typedef union BSP_ECG_ADS1192_chXsetReg_UNION {
     } B;                            //!< Channel X register bits
 } BSP_ECG_ADS1192_chXsetReg_U;
 
-
 //! ECG ADS1192 driver configuration structure
 typedef struct BSP_ECG_ADS1192_config_STRUCT {
     nrf_drv_spi_t        *spiInstance;  //!< SPI master driver instance structure
     nrf_drv_spi_config_t *spiConfig;    //!< SPI master driver instance configuration
 
 } BSP_ECG_ADS1192_config_S;
-
 
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
@@ -109,8 +109,8 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
  *                        PUBLIC FUNCTION DECLARATIONS
  ******************************************************************************/
 void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
-                          BSP_ECG_ADS1192_config_S *inConfig,
-                          BSP_ECG_ADS1192_err_E *outErr);
+        BSP_ECG_ADS1192_config_S *inConfig,
+        BSP_ECG_ADS1192_err_E *outErr);
 
 #endif // #ifndef BSP_ECG_ADS1192_H_
 /*******************************************************************************
