@@ -16,6 +16,7 @@
 #if ENABLED_SPI_COUNT
 
 #include "nrf_drv_spi.h"
+#include "nrf51.h"
 #include "nrf_drv_common.h"
 #include "nrf_gpio.h"
 #include "nrf_assert.h"
@@ -317,25 +318,216 @@ ret_code_t nrf_drv_spi_transfer(nrf_drv_spi_t const * const p_instance,
                                 uint8_t const * p_tx_buffer,
                                 uint8_t         tx_buffer_length,
                                 uint8_t       * p_rx_buffer,
-                                uint8_t         rx_buffer_length)
-{
+                                uint8_t         rx_buffer_length) {
+
     nrf_drv_spi_xfer_desc_t xfer_desc;
     xfer_desc.p_tx_buffer = p_tx_buffer;
     xfer_desc.p_rx_buffer = p_rx_buffer;
     xfer_desc.tx_length   = tx_buffer_length;
     xfer_desc.rx_length   = rx_buffer_length;
 
-    NRF_LOG_INFO("Transfer tx_len:%d, rx_len:%d.\r\n", tx_buffer_length, rx_buffer_length);
-    NRF_LOG_DEBUG("Tx data:\r\n");
-    NRF_LOG_HEXDUMP_DEBUG((uint8_t *)p_tx_buffer, tx_buffer_length * sizeof(p_tx_buffer));
     return nrf_drv_spi_xfer(p_instance, &xfer_desc, 0);
 }
 
-static void finish_transfer(spi_control_block_t * p_cb)
-{
+uint32_t* DRV_SPI_MasterInit(nrf_drv_spi_t *const spi_instance,
+        nrf_drv_spi_config_t const *spi_config) {
+
+    if(spi_instance == NULL || spi_config == NULL) {
+        return 0;
+    }
+
+    NRF_SPI_Type *SPI = spi_instance->p_registers;
+
+    memcpy(&m_cb[spi_instance->drv_inst_idx], spi_config, sizeof(nrf_drv_spi_config_t));
+
+    // configure GPIO pins used for pselsck, pselmosi, pselmiso and pselss for SPI0 */
+    nrf_gpio_cfg_output(spi_config->sck_pin);
+    nrf_gpio_cfg_output(spi_config->mosi_pin);
+    nrf_gpio_cfg_input(spi_config->miso_pin, NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_output(spi_config->ss_pin);
+
+    // configure pins
+    SPI->PSELSCK  = spi_config->sck_pin;
+    SPI->PSELMOSI = spi_config->mosi_pin;
+    SPI->PSELMISO = spi_config->miso_pin;
+    nrf_gpio_pin_set(spi_config->ss_pin); // disable Set slave select (inactive high)
+
+    // set frequency
+    nrf_spi_frequency_set(SPI, spi_config->frequency);
+
+    // configure mode, bit order
+    nrf_spi_configure(SPI,
+            spi_config->mode,
+            spi_config->bit_order);
+
+    SPI->EVENTS_READY = 0;
+
+    // enable
+    SPI->ENABLE = (SPI_ENABLE_ENABLE_Enabled << SPI_ENABLE_ENABLE_Pos);
+
+    return (uint32_t *)spi_instance->p_registers;
+}
+
+bool DRV_SPI_MasterTxRxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint8_t const *tx_data,
+        uint16_t transfer_size,
+        uint8_t *rx_data) {
+
+    volatile uint32_t *SPI_DATA_READY;
+    uint32_t tmp;
+
+    // check for null pointers
+    if(tx_data == NULL || rx_data == NULL) {
+        return false;
+    }
+
+    // which SPI instance to take
+    NRF_SPI_Type *SPI = p_instance->p_registers;//NRF_SPI0;
+    // local data of SPI instance
+    spi_control_block_t * p_cb  = &m_cb[p_instance->drv_inst_idx];
+
+    SPI_DATA_READY = &SPI->EVENTS_READY;
+
+    // enable slave (slave select active low)
+    nrf_gpio_pin_clear(p_cb->ss_pin);
+
+    // clear the event to be ready to receive next messages
+    *SPI_DATA_READY = 0;
+
+    // send first byte
+    SPI->TXD = (uint32_t)*tx_data++;
+    tmp = (uint32_t)*tx_data++;
+
+    while(--transfer_size) {
+        SPI->TXD = tmp;
+        tmp = (uint32_t)*tx_data++;
+
+        // wait for the transaction complete or timeout (about 10ms - 20 ms)
+        while (*SPI_DATA_READY == 0);
+
+        // clear the event to be ready to receive next messages
+        *SPI_DATA_READY = 0;
+
+        // get RX byte from slave
+        *rx_data++ = SPI->RXD;
+    }
+
+    // wait for the transaction complete or timeout (about 10ms - 20 ms)
+    while (*SPI_DATA_READY == 0);
+
+    // get last byte from slave
+    *rx_data = SPI->RXD;
+
+    // disable slave (slave select active low)
+    nrf_gpio_pin_set(p_cb->ss_pin);
+
+    return true;
+}
+
+bool DRV_SPI_masterTxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint16_t transfer_size,
+        const uint8_t *tx_data) {
+
+    // we don't care about bytes received
+    volatile uint32_t dummyread;
+
+    if(tx_data == 0) {
+        return false;
+    }
+
+    // enter critical section
+    __disable_irq();
+
+    // which SPI instance to take
+    NRF_SPI_Type *SPI = p_instance->p_registers;//NRF_SPI0;
+    // local data of SPI instance
+    spi_control_block_t *p_cb  = &m_cb[p_instance->drv_inst_idx];
+
+    // enable slave (slave select active low)
+    nrf_gpio_pin_clear(p_cb->ss_pin);
+
+    // clear the event to be ready to receive next messages
+    SPI->EVENTS_READY = 0;
+
+    SPI->TXD = (uint32_t)*tx_data++;
+
+    while(--transfer_size) {
+        SPI->TXD =  (uint32_t)*tx_data++;
+
+        // wait for the transaction complete or timeout (about 10ms - 20 ms)
+        while (SPI->EVENTS_READY == 0);
+
+        // clear the event to be ready to receive next messages
+        SPI->EVENTS_READY = 0;
+        // read in byte RX
+        dummyread = SPI->RXD;
+    }
+
+    // wait for the final transaction to complete or timeout (about 10ms - 20 ms)
+    while (SPI->EVENTS_READY == 0);
+    // read in last byte
+    dummyread = SPI->RXD;
+
+    // disable slave (slave select active low)
+    nrf_gpio_pin_set(p_cb->ss_pin);
+
+    // exit critical section
+    __enable_irq();
+
+    return true;
+}
+
+
+bool DRV_SPI_masterRxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint16_t transfer_size,
+        uint8_t *rx_data) {
+
+    if(rx_data == NULL) {
+        return false;
+    }
+
+    // which SPI instance to take
+    NRF_SPI_Type *SPI = p_instance->p_registers;//NRF_SPI0;
+    // local data of SPI instance
+    spi_control_block_t *p_cb  = &m_cb[p_instance->drv_inst_idx];
+
+    // enable slave (slave select active low)
+    nrf_gpio_pin_clear(p_cb->ss_pin);
+
+    SPI->EVENTS_READY = 0;
+
+    // send dummy zeros
+    SPI->TXD = 0;
+
+    while(--transfer_size) {
+        SPI->TXD = 0;
+
+        // wait for the transaction complete or timeout (about 10ms - 20 ms)
+        while(SPI->EVENTS_READY == 0);
+
+        // clear the event to be ready to receive next messages
+        SPI->EVENTS_READY = 0;
+
+        *rx_data++ = SPI->RXD;
+    }
+
+    // wait for the transaction complete or timeout (about 10ms - 20 ms)
+    while (SPI->EVENTS_READY == 0);
+
+    // read in last byte
+    *rx_data = SPI->RXD;
+
+    // disable slave (slave select active low)
+    nrf_gpio_pin_set(p_cb->ss_pin);
+
+    return true;
+}
+
+
+static void finish_transfer(spi_control_block_t * p_cb) {
+
     // If Slave Select signal is used, this is the time to deactivate it.
-    if (p_cb->ss_pin != NRF_DRV_SPI_PIN_NOT_USED)
-    {
+    if (p_cb->ss_pin != NRF_DRV_SPI_PIN_NOT_USED) {
         nrf_gpio_pin_set(p_cb->ss_pin);
     }
 
@@ -343,10 +535,6 @@ static void finish_transfer(spi_control_block_t * p_cb)
     // transfers to be started directly from the handler function.
     p_cb->transfer_in_progress = false;
     p_cb->evt.type = NRF_DRV_SPI_EVENT_DONE;
-    NRF_LOG_INFO("Transfer rx_len:%d.\r\n", p_cb->evt.data.done.rx_length);
-    NRF_LOG_DEBUG("Rx data:\r\n");
-    NRF_LOG_HEXDUMP_DEBUG((uint8_t *)p_cb->evt.data.done.p_rx_buffer, 
-                            p_cb->evt.data.done.rx_length * sizeof(p_cb->evt.data.done.p_rx_buffer));
     p_cb->handler(&p_cb->evt);
 }
 
@@ -433,7 +621,6 @@ static void spi_xfer(NRF_SPI_Type                  * p_spi,
         do {
             while (!nrf_spi_event_check(p_spi, NRF_SPI_EVENT_READY)) {}
             nrf_spi_event_clear(p_spi, NRF_SPI_EVENT_READY);
-            NRF_LOG_DEBUG("SPI: Event: NRF_SPI_EVENT_READY.\r\n"); 
         } while (transfer_byte(p_spi, p_cb));
         if (p_cb->ss_pin != NRF_DRV_SPI_PIN_NOT_USED)
         {
@@ -526,8 +713,8 @@ static ret_code_t spim_xfer(NRF_SPIM_Type                * p_spim,
 
 ret_code_t nrf_drv_spi_xfer(nrf_drv_spi_t     const * const p_instance,
                             nrf_drv_spi_xfer_desc_t const * p_xfer_desc,
-                            uint32_t                        flags)
-{
+                            uint32_t                        flags) {
+
     spi_control_block_t * p_cb  = &m_cb[p_instance->drv_inst_idx];
     ASSERT(p_cb->state != NRF_DRV_STATE_UNINITIALIZED);
     ASSERT(p_xfer_desc->p_tx_buffer != NULL || p_xfer_desc->tx_length == 0);
@@ -535,16 +722,12 @@ ret_code_t nrf_drv_spi_xfer(nrf_drv_spi_t     const * const p_instance,
 
     ret_code_t err_code = NRF_SUCCESS;
 
-    if (p_cb->transfer_in_progress)
-    {
+    if (p_cb->transfer_in_progress) {
         err_code = NRF_ERROR_BUSY;
-        NRF_LOG_WARNING("Function: %s, error code: %s.\r\n", (uint32_t)__func__, (uint32_t)ERR_TO_STR(err_code));
         return err_code;
     }
-    else
-    {
-        if (p_cb->handler && !(flags & (NRF_DRV_SPI_FLAG_REPEATED_XFER | NRF_DRV_SPI_FLAG_NO_XFER_EVT_HANDLER)))
-        {
+    else {
+        if (p_cb->handler && !(flags & (NRF_DRV_SPI_FLAG_REPEATED_XFER | NRF_DRV_SPI_FLAG_NO_XFER_EVT_HANDLER))) {
             p_cb->transfer_in_progress = true;
         }
     }
@@ -553,8 +736,7 @@ ret_code_t nrf_drv_spi_xfer(nrf_drv_spi_t     const * const p_instance,
     p_cb->tx_done = false;
     p_cb->rx_done = false;
 
-    if (p_cb->ss_pin != NRF_DRV_SPI_PIN_NOT_USED)
-    {
+    if (p_cb->ss_pin != NRF_DRV_SPI_PIN_NOT_USED) {
         nrf_gpio_pin_clear(p_cb->ss_pin);
     }
     CODE_FOR_SPIM
@@ -563,19 +745,19 @@ ret_code_t nrf_drv_spi_xfer(nrf_drv_spi_t     const * const p_instance,
     )
     CODE_FOR_SPI
     (
-        if (flags)
-        {
+        if (flags) {
             p_cb->transfer_in_progress = false;
             err_code = NRF_ERROR_NOT_SUPPORTED;
         }
-        else
-        {
+        else {
             spi_xfer(p_instance->p_registers, p_cb, p_xfer_desc);
         }
-        NRF_LOG_INFO("Function: %s, error code: %s.\r\n", (uint32_t)__func__, (uint32_t)ERR_TO_STR(err_code));
+
         return err_code;
     )
 }
+
+
 #ifdef SPIM_IN_USE
 static void irq_handler_spim(NRF_SPIM_Type * p_spim, spi_control_block_t * p_cb)
 {
@@ -608,7 +790,6 @@ static void irq_handler_spi(NRF_SPI_Type * p_spi, spi_control_block_t * p_cb)
     ASSERT(p_cb->handler);
 
     nrf_spi_event_clear(p_spi, NRF_SPI_EVENT_READY);
-    NRF_LOG_DEBUG("SPI: Event: NRF_SPI_EVENT_READY.\r\n"); 
 
     if (!transfer_byte(p_spi, p_cb))
     {

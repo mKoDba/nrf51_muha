@@ -42,13 +42,6 @@ nrf_drv_spi_config_t spi0Config = {
 /*******************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
  ******************************************************************************/
-void spiEventHandler(nrf_drv_spi_evt_t const * p_event) {
-    //spi_xfer_done = true;
-    //if (m_rx_buf[0] != 0) {
-    //    NRF_LOG_INFO(" Received: \r\n");
-    //   NRF_LOG_HEXDUMP_INFO(m_rx_buf, strlen((const char *)m_rx_buf));
-    //}
-}
 
 /*******************************************************************************
  *                          END OF FILE

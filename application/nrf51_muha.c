@@ -38,15 +38,11 @@
 static void NRF51_MUHA_initGpio() {
 
     // initialize input pins
-    nrf_gpio_cfg_input(ECG_DOUT, GPIO_PIN_CNF_PULL_Disabled); // MISO pin
     nrf_gpio_cfg_input(ECG_DRDY, GPIO_PIN_CNF_PULL_Pullup); // active low signal
 
     // initialize output pins
     nrf_gpio_cfg_output(LD1);
     nrf_gpio_cfg_output(ECG_RST);
-    nrf_gpio_cfg_output(ECG_CS);    // ECG_CS has external PULL UP resistor
-    nrf_gpio_cfg_output(ECG_DIN);   // MOSI pin
-    nrf_gpio_cfg_output(ECG_CLK);
 
     // TODO: [mario.kodba 20.10.2020.] set other (currently unused) pins
 }
@@ -70,12 +66,17 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 //        drvInitErr = ERR_DRV_TIMER_INIT_FAIL;
 //    }
 
-    // initialize SPI0 instance for ECG
+    __disable_irq();
+    // initialize SPI0 instance for ADS1192
     // if passed handler function, nrf_drv_spi_transfer returns immediately (NON-BLOCKING)
-    spiInitErr = nrf_drv_spi_init(&spi0Instance, &spi0Config, &spiEventHandler);
+    spiInitErr = nrf_drv_spi_init(&spi0Instance, &spi0Config, NULL);
     if(spiInitErr != NRF_SUCCESS) {
         drvInitErr = ERR_DRV_SPI_INIT_FAIL;
     }
+
+//    __disable_irq();
+//    DRV_SPI_MasterInit(&spi0Instance, &spi0Config);
+    __enable_irq();
 
     if(drvInitErr != ERR_NONE) {
         // init some other driver

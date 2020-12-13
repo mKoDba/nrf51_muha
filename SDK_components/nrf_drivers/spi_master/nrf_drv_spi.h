@@ -184,6 +184,13 @@ typedef struct
     uint8_t         rx_length;   ///< RX buffer length.
 }nrf_drv_spi_xfer_desc_t;
 
+typedef struct
+{
+    uint8_t const * p_tx_buffer; ///< Pointer to TX buffer.
+    uint16_t         tx_length;   ///< TX buffer length.
+    uint8_t       * p_rx_buffer; ///< Pointer to RX buffer.
+    uint16_t         rx_length;   ///< RX buffer length.
+}nrf_drv_spi_xfer_desc_t_16;
 
 /**
  * @brief Macro for setting up single transfer descriptor.
@@ -233,6 +240,15 @@ typedef struct
         nrf_drv_spi_xfer_desc_t done;  ///< Event data for DONE event.
     } data;
 } nrf_drv_spi_evt_t;
+
+typedef struct
+{
+    nrf_drv_spi_evt_type_t  type;      ///< Event type.
+    union
+    {
+        nrf_drv_spi_xfer_desc_t_16 done;  ///< Event data for DONE event.
+    } data;
+} nrf_drv_spi_evt_t_16;
 
 /**
  * @brief SPI master driver event handler type.
@@ -301,6 +317,21 @@ ret_code_t nrf_drv_spi_transfer(nrf_drv_spi_t const * const p_instance,
                                 uint8_t       * p_rx_buffer,
                                 uint8_t         rx_buffer_length);
 
+uint32_t* DRV_SPI_MasterInit(nrf_drv_spi_t *const spi_instance,
+        nrf_drv_spi_config_t const *spi_config);
+
+bool DRV_SPI_MasterTxRxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint8_t const *tx_data,
+        uint16_t transfer_size,
+        uint8_t *rx_data);
+
+bool DRV_SPI_masterTxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint16_t transfer_size,
+        const uint8_t *tx_data);
+
+bool DRV_SPI_masterRxBlocking(nrf_drv_spi_t const *const p_instance,
+        uint16_t transfer_size,
+        uint8_t *rx_data);
 
 /**
  * @brief Function for starting the SPI data transfer with additional option flags.

@@ -15,6 +15,12 @@
 #include <stdbool.h>
 
 #include "nrf_drv_spi.h"
+
+/*******************************************************************************
+ *                              DEFINES
+ ******************************************************************************/
+#define DEBUG false
+
 /*******************************************************************************
  *                              ENUMERATIONS
  ******************************************************************************/
@@ -44,6 +50,17 @@ typedef enum BSP_ECG_ADS1192_reg_ENUM {
     BSP_ECG_ADS1192_reg_COUNT
 } BSP_ECG_ADS1192_reg_E;
 
+typedef enum BSP_ECG_ADS1192_convRate_ENUM {
+    BSP_ECG_ADS1192_convRate_125_SPS  = 0u,     //!< 125 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_250_SPS  = 1u,     //!< 250 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_500_SPS  = 2u,     //!< 500 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_1000_SPS = 3u,     //!< 1000 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_2000_SPS = 4u,     //!< 2000 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_4000_SPS = 5u,     //!< 4000 Samples per second conversion
+    BSP_ECG_ADS1192_convRate_8000_SPS = 6u      //!< 8000 Samples per second conversion
+} BSP_ECG_ADS1192_convRate_E;
+
+
 /*******************************************************************************
  *                              DATA STRUCTURES
  ******************************************************************************/
@@ -51,9 +68,8 @@ typedef enum BSP_ECG_ADS1192_reg_ENUM {
 typedef union BSP_ECG_ADS1192_config1Reg_UNION {
     uint8_t R;                      //!< CONFIG 1 register value
     struct {
-       uint8_t  dr0         : 1;    //!< DR[2:0] bits determine both channel 1
-       uint8_t  dr1         : 1;    //!< and channel 2 over-sampling ratio
-       uint8_t  dr2         : 1;
+       uint8_t  dr          : 3;    /*!< DR[2:0] bits determine both channel 1
+                                         and channel 2 over-sampling ratio */
        uint8_t              : 4;    //!< Reserved - must be set to 0
        uint8_t  singleShot  : 1;    /*!< Sets conversion mode
                                          [ 0 -> Continuous mode (default) ]
@@ -96,8 +112,11 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
+#if (DEBUG == true)
     int16_t temperature;                        //!< Temperature of device
-
+    float digitalVddSupply;                     //!< Digital VDD supply
+    float analogVddSupply;                      //!< Analog VDD supply
+#endif // #if (DEBUG == true)
     bool isInitialized;                         //!< Is device initialized
 } BSP_ECG_ADS1192_device_S;
 /*******************************************************************************
