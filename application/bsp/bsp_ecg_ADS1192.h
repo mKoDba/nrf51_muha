@@ -15,6 +15,7 @@
 #include <stdbool.h>
 
 #include "nrf_drv_spi.h"
+#include "nrf_drv_gpiote.h"
 
 /*******************************************************************************
  *                              DEFINES
@@ -34,18 +35,18 @@ typedef enum BSP_ECG_ADS1192_err_ENUM {
 } BSP_ECG_ADS1192_err_E;
 
 typedef enum BSP_ECG_ADS1192_reg_ENUM {
-    BSP_ECG_ADS1192_reg_ID          = 0u,       //!< ADS1192 ID register
-    BSP_ECG_ADS1192_reg_CONFIG_1    = 1u,       //!< ADS1192 CONFIG 1 register
-    BSP_ECG_ADS1192_reg_CONFIG_2    = 2u,       //!< ADS1192 CONFIG 2 register
-    BSP_ECG_ADS1192_reg_LOFF        = 3u,       //!< ADS1192 LOFF register
-    BSP_ECG_ADS1192_reg_CH1_SET     = 4u,       //!< ADS1192 CH1 register
-    BSP_ECG_ADS1192_reg_CH2_SET     = 5u,       //!< ADS1192 CH2 register
-    BSP_ECG_ADS1192_reg_RLD_SENS    = 6u,       //!< ADS1192 RLD_SENS register
-    BSP_ECG_ADS1192_reg_LOFF_SENS   = 7u,       //!< ADS1192 LOFF_SENS register
-    BSP_ECG_ADS1192_reg_LOFF_STAT   = 8u,       //!< ADS1192 LOFF_STAT register
-    BSP_ECG_ADS1192_reg_MISC_1      = 9u,       //!< ADS1192 MISC 1 register
-    BSP_ECG_ADS1192_reg_MISC_2      =10u,       //!< ADS1192 MISC 2 register
-    BSP_ECG_ADS1192_reg_GPIO        =11u,       //!< ADS1192 GPIO register
+    BSP_ECG_ADS1192_reg_ID        = 0u,         //!< ADS1192 ID register
+    BSP_ECG_ADS1192_reg_CONFIG_1  = 1u,         //!< ADS1192 CONFIG 1 register
+    BSP_ECG_ADS1192_reg_CONFIG_2  = 2u,         //!< ADS1192 CONFIG 2 register
+    BSP_ECG_ADS1192_reg_LOFF      = 3u,         //!< ADS1192 LOFF register
+    BSP_ECG_ADS1192_reg_CH1_SET   = 4u,         //!< ADS1192 CH1 register
+    BSP_ECG_ADS1192_reg_CH2_SET   = 5u,         //!< ADS1192 CH2 register
+    BSP_ECG_ADS1192_reg_RLD_SENS  = 6u,         //!< ADS1192 RLD_SENS register
+    BSP_ECG_ADS1192_reg_LOFF_SENS = 7u,         //!< ADS1192 LOFF_SENS register
+    BSP_ECG_ADS1192_reg_LOFF_STAT = 8u,         //!< ADS1192 LOFF_STAT register
+    BSP_ECG_ADS1192_reg_MISC_1    = 9u,         //!< ADS1192 MISC 1 register
+    BSP_ECG_ADS1192_reg_MISC_2    = 10u,        //!< ADS1192 MISC 2 register
+    BSP_ECG_ADS1192_reg_GPIO      = 11u,        //!< ADS1192 GPIO register
 
     BSP_ECG_ADS1192_reg_COUNT
 } BSP_ECG_ADS1192_reg_E;
@@ -60,6 +61,27 @@ typedef enum BSP_ECG_ADS1192_convRate_ENUM {
     BSP_ECG_ADS1192_convRate_8000_SPS = 6u      //!< 8000 Samples per second conversion
 } BSP_ECG_ADS1192_convRate_E;
 
+typedef enum BSP_ECG_ADS1192_pga_ENUM {
+    BSP_ECG_ADS1192_pga_6X  = 0u,               //!< PGA gain setting for 6x
+    BSP_ECG_ADS1192_pga_1X  = 1u,               //!< PGA gain setting for 1x
+    BSP_ECG_ADS1192_pga_2X  = 2u,               //!< PGA gain setting for 2x
+    BSP_ECG_ADS1192_pga_3X  = 3u,               //!< PGA gain setting for 3x
+    BSP_ECG_ADS1192_pga_4X  = 4u,               //!< PGA gain setting for 4x
+    BSP_ECG_ADS1192_pga_8X  = 5u,               //!< PGA gain setting for 8x
+    BSP_ECG_ADS1192_pga_12X = 6u                //!< PGA gain setting for 12x
+} BSP_ECG_ADS1192_pga_E;
+
+typedef enum BSP_ECG_ADS1192_mux_ENUM {
+    BSP_ECG_ADS1192_mux_ELECTRODE_IN = 0u,      //!< Normal electrode input
+    BSP_ECG_ADS1192_pga_SHORTED_IN   = 1u,      //!< Input shorted (offset measurements)
+    BSP_ECG_ADS1192_mux_RLD_MEAS     = 2u,      //!< Right-Leg drive measurement
+    BSP_ECG_ADS1192_mux_SUPPLY_MEAS  = 3u,      //!< Supply measurement
+    BSP_ECG_ADS1192_mux_TEMP_SENS    = 4u,      //!< Temperature measurement
+    BSP_ECG_ADS1192_mux_TEST_SIGNAL  = 5u,      //!< Test signal
+    BSP_ECG_ADS1192_mux_RLD_DRP      = 6u,      //!< RLD_DRP
+    BSP_ECG_ADS1192_mux_RLD_DRM      = 7u,      //!< RLD_DRM
+    BSP_ECG_ADS1192_mux_RLD_DRPM_CH1 = 8u       //!< RLD_DRPM (for channel 2)
+} BSP_ECG_ADS1192_mux_E;
 
 /*******************************************************************************
  *                              DATA STRUCTURES
@@ -107,6 +129,8 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
     nrf_drv_spi_t        *spiInstance;  //!< SPI master driver instance structure
     nrf_drv_spi_config_t *spiConfig;    //!< SPI master driver instance configuration
 
+    BSP_ECG_ADS1192_convRate_E samplingRate;    //!< Signal sampling rate
+    BSP_ECG_ADS1192_pga_E      pgaSetting;      //!< PGA setting for normal electrode reading
 } BSP_ECG_ADS1192_config_S;
 
 //! ECG ADS1192 driver device structure
@@ -130,6 +154,13 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
 void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_config_S *inConfig,
         BSP_ECG_ADS1192_err_E *outErr);
+
+void BSP_ECG_ADS1192_startEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
+        BSP_ECG_ADS1192_err_E *outErr);
+void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
+        BSP_ECG_ADS1192_err_E *outErr);
+
+void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 
 #endif // #ifndef BSP_ECG_ADS1192_H_
 /*******************************************************************************

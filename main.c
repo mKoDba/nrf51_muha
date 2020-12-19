@@ -33,8 +33,6 @@ int main(void) {
 
     if(error == ERR_NONE) {
         NRF51_MUHA_start();
-    } else {
-        // error handling
     }
 
     // should not get to here

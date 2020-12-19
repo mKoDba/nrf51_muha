@@ -435,8 +435,8 @@ bool DRV_SPI_masterTxBlocking(nrf_drv_spi_t const *const p_instance,
         return false;
     }
 
-    // enter critical section
-    __disable_irq();
+//    // enter critical section
+//    __disable_irq();
 
     // which SPI instance to take
     NRF_SPI_Type *SPI = p_instance->p_registers;//NRF_SPI0;
@@ -471,8 +471,8 @@ bool DRV_SPI_masterTxBlocking(nrf_drv_spi_t const *const p_instance,
     // disable slave (slave select active low)
     nrf_gpio_pin_set(p_cb->ss_pin);
 
-    // exit critical section
-    __enable_irq();
+//    // exit critical section
+//    __enable_irq();
 
     return true;
 }

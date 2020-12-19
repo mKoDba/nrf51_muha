@@ -19,7 +19,8 @@
 typedef enum ERR_ENUM {
     ERR_NONE                = 0u,
     ERR_DRV_SPI_INIT_FAIL,
-    ERR_DRV_TIMER_INIT_FAIL
+    ERR_DRV_TIMER_INIT_FAIL,
+    ERR_GPIO_INIT_FAIL
 } ERR_E;
 
 /*******************************************************************************

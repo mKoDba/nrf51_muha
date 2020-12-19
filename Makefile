@@ -23,6 +23,7 @@ SRC_FILES += \
   $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master/nrf_drv_spi.c \
   $(PROJ_DIR)/SDK_components/nrf_drivers/common/nrf_drv_common.c \
   $(PROJ_DIR)/SDK_components/nrf_drivers/timer/nrf_drv_timer.c \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/gpiote/nrf_drv_gpiote.c \
   $(PROJ_DIR)/SDK_components/toolchain/gcc/gcc_startup_nrf51.S \
   $(PROJ_DIR)/SDK_components/toolchain/system_nrf51.c \
   $(PROJ_DIR)/segger_rtt/RTT_Syscalls_GCC.c \
@@ -56,6 +57,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/SDK_components/nrf_drivers/hal \
   $(PROJ_DIR)/SDK_components/nrf_drivers/common \
   $(PROJ_DIR)/SDK_components/nrf_drivers/delay \
+  $(PROJ_DIR)/SDK_components/nrf_drivers/gpiote \
   $(PROJ_DIR)/SDK_components/toolchain \
   $(PROJ_DIR)/SDK_components/toolchain/cmsis/include \
   $(PROJ_DIR)/SDK_components/softdevice/headers \

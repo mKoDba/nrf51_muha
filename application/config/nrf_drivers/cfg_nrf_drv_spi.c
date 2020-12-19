@@ -22,7 +22,7 @@ nrf_drv_spi_t spi0Instance = {
         .p_registers        = NRF_SPI0,             //!< SPI peripheral registers
         .irq                = SPI0_IRQ,             //!< SPI instance IRQ number
         .drv_inst_idx       = SPI0_INSTANCE_INDEX,  //!< SPI instance index
-        .use_easy_dma       = false,                //!< use EasyDMA
+        .use_easy_dma       = false,                //!< EasyDMA setting
 };
 
 nrf_drv_spi_config_t spi0Config = {
