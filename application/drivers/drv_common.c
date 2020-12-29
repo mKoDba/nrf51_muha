@@ -8,7 +8,7 @@
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "nrf51_muha.h"
+#include "drv_common.h"
 
 /*******************************************************************************
  *                              DEFINES
@@ -18,29 +18,21 @@
  *                          PUBLIC FUNCTION DEFINITIONS
  ******************************************************************************/
 /*******************************************************************************
- * @brief Application main function.
+ * @brief Sets priority and enables IRQ.
  ******************************************************************************
- * @param None.
+ * @param [in] *type    - describe what that something is.
+ * @param [in] priority - describe what that something is.
  ******************************************************************************
  * @author  mario.kodba
- * @date    18.10.2020.
+ * @date    19.20.2020.
  ******************************************************************************/
-int main(void) {
+void DRV_COMMON_enableIRQPriority(void *type, uint8_t priority) {
+    // TODO: [add check if priority is within range/allowed]
+    uint8_t typeNum = (uint8_t)((uint32_t)type>>12U);
 
-    ERR_E error = ERR_NONE;
-
-    NRF51_MUHA_init(&error);
-
-    if(error == ERR_NONE) {
-        NRF51_MUHA_start();
-    }
-
-    while(1) {
-        ;
-    }
-
-    // should not get to here
-    return 0;
+    NVIC_SetPriority((IRQn_Type) typeNum, priority);
+    NVIC_ClearPendingIRQ((IRQn_Type) typeNum);
+    NVIC_EnableIRQ((IRQn_Type) typeNum);
 }
 
 /*******************************************************************************

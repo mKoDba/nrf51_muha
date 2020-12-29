@@ -1,4 +1,4 @@
-/*	header info, to be added
+/*  header info, to be added
  *
  *
  *
@@ -8,9 +8,10 @@
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
+#include "nrf51.h"
 #include "cfg_drv_spi.h"
-#include "cfg_nrf_drv_spi.h"
+
+#include "cfg_nrf51_muha_pinout.h"
 
 /*******************************************************************************
  *                              DEFINES
@@ -19,14 +20,28 @@
 /*******************************************************************************
  *                              GLOBAL VARIABLES
  ******************************************************************************/
-BSP_ECG_ADS1192_device_S ecgDevice;
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
-
-        .samplingRate = BSP_ECG_ADS1192_convRate_250_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
+DRV_SPI_config_S configSpi0 = {
+        .id = DRV_SPI_id_0,
+        .sckPin = ECG_CLK,
+        .mosiPin = ECG_DIN,
+        .misoPin = ECG_DOUT,
+        .ssPin = ECG_CS,
+        .irqPriority = 3u,
+        .orc = 0x00u,
+        .frequency = DRV_SPI_freq_1M,
+        .mode = DRV_SPI_mode_1,
+        .bitOrder = DRV_SPI_bitOrder_MSB_FIRST
 };
+
+DRV_SPI_instance_S instanceSpi0 = {
+        .spiStruct          = NRF_SPI0,             //!< SPI peripheral registers
+        .irq                = SPI0_TWI0_IRQn,       //!< SPI instance IRQ number
+        .isInitialized      = false
+};
+
+/*******************************************************************************
+ *                          END OF FILE
+ ******************************************************************************/
 
 /*******************************************************************************
  *                          END OF FILE

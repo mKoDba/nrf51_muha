@@ -8,9 +8,7 @@
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
-#include "cfg_nrf_drv_spi.h"
+#include "cfg_drv_timer.h"
 
 /*******************************************************************************
  *                              DEFINES
@@ -19,14 +17,20 @@
 /*******************************************************************************
  *                              GLOBAL VARIABLES
  ******************************************************************************/
-BSP_ECG_ADS1192_device_S ecgDevice;
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+DRV_TIMER_instance_S instanceTimer1;
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_250_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
+DRV_TIMER_config_S configTimer1 = {
+        .timerReg = NRF_TIMER1,
+        .id = DRV_TIMER_id_1,
+        .frequency = DRV_TIMER_freq_8MHz,
+        .mode = DRV_TIMER_mode_NORMAL,
+        .bitWidth = DRV_TIMER_bitWidth_16,
+        .irqPriority = 3u
 };
+
+/*******************************************************************************
+ *                          END OF FILE
+ ******************************************************************************/
 
 /*******************************************************************************
  *                          END OF FILE

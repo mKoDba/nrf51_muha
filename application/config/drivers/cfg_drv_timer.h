@@ -1,33 +1,37 @@
-/*	header info, to be added
+/*
+ * cfg_drv_timer.h
  *
- *
- *
+ *  Created on: 19.12.2020.
+ *  Author: mario.kodba
  */
 
+#ifndef CFG_DRV_TIMER_H_
+#define CFG_DRV_TIMER_H_
 
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
-#include "cfg_nrf_drv_spi.h"
+#include "drv_timer.h"
 
 /*******************************************************************************
- *                              DEFINES
+ *                              ENUMERATIONS
+ ******************************************************************************/
+
+/*******************************************************************************
+ *                              DATA STRUCTURES
  ******************************************************************************/
 
 /*******************************************************************************
  *                              GLOBAL VARIABLES
  ******************************************************************************/
-BSP_ECG_ADS1192_device_S ecgDevice;
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+extern DRV_TIMER_config_S configTimer1;
+extern DRV_TIMER_instance_S instanceTimer1;
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_250_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
+/*******************************************************************************
+ *                         PUBLIC FUNCTION DECLARATIONS
+ ******************************************************************************/
 
+#endif // #ifndef CFG_DRV_TIMER_H_
 /*******************************************************************************
  *                          END OF FILE
  ******************************************************************************/

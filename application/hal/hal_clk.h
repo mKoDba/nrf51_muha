@@ -1,33 +1,38 @@
-/*	header info, to be added
+/*
+ * hal_clk.h
  *
- *
- *
+ *  Created on: 19.20.2020.
+ *  Author: mario.kodba
  */
 
+#ifndef HAL_CLK_H_
+#define HAL_CLK_H_
 
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
-#include "cfg_nrf_drv_spi.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "nrf51.h"
 
 /*******************************************************************************
  *                              DEFINES
  ******************************************************************************/
 
 /*******************************************************************************
- *                              GLOBAL VARIABLES
+ *                              DATA STRUCTURES
  ******************************************************************************/
-BSP_ECG_ADS1192_device_S ecgDevice;
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_250_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
+/*******************************************************************************
+ *                         PUBLIC FUNCTION DECLARATIONS
+ ******************************************************************************/
+void HAL_CLK_hfclkStart(void);
+void HAL_CLK_hfclkStop(void);
 
+
+#endif // #ifndef HAL_CLK_H_
 /*******************************************************************************
  *                          END OF FILE
  ******************************************************************************/

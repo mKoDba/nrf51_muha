@@ -15,14 +15,19 @@ SRC_FILES += \
   $(PROJ_DIR)/application/nrf51_muha.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
-  $(PROJ_DIR)/application/config/nrf_drivers/cfg_nrf_drv_spi.c \
+  $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
+  $(PROJ_DIR)/application/config/drivers/cfg_drv_spi.c \
+  $(PROJ_DIR)/application/drivers/drv_common.c \
+  $(PROJ_DIR)/application/drivers/drv_timer.c \
+  $(PROJ_DIR)/application/drivers/drv_spi.c \
+  $(PROJ_DIR)/application/hal/hal_timer.c \
+  $(PROJ_DIR)/application/hal/hal_clk.c \
+  $(PROJ_DIR)/application/hal/hal_spi.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error_weak.c \
   $(PROJ_DIR)/SDK_components/libraries/util/nrf_assert.c \
   $(PROJ_DIR)/SDK_components/libraries/util/sdk_errors.c \
-  $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master/nrf_drv_spi.c \
   $(PROJ_DIR)/SDK_components/nrf_drivers/common/nrf_drv_common.c \
-  $(PROJ_DIR)/SDK_components/nrf_drivers/timer/nrf_drv_timer.c \
   $(PROJ_DIR)/SDK_components/nrf_drivers/gpiote/nrf_drv_gpiote.c \
   $(PROJ_DIR)/SDK_components/toolchain/gcc/gcc_startup_nrf51.S \
   $(PROJ_DIR)/SDK_components/toolchain/system_nrf51.c \
@@ -31,7 +36,6 @@ SRC_FILES += \
   $(PROJ_DIR)/segger_rtt/SEGGER_RTT.c \
   $(PROJ_DIR)/segger_rtt/nrf_log_backend_serial.c \
   $(PROJ_DIR)/segger_rtt/nrf_log_frontend.c \
-  $(SDK_ROOT)/components/libraries/timer/app_timer.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/crc16/crc16.c \
   $(SDK_ROOT)/components/libraries/fds/fds.c \
@@ -47,13 +51,14 @@ INC_FOLDERS += \
   $(PROJ_DIR)/segger_rtt \
   $(PROJ_DIR)/application \
   $(PROJ_DIR)/application/bsp \
+  $(PROJ_DIR)/application/drivers \
+  $(PROJ_DIR)/application/hal \
   $(PROJ_DIR)/application/config \
   $(PROJ_DIR)/application/config/bsp \
+  $(PROJ_DIR)/application/config/drivers \
   $(PROJ_DIR)/application/config/nrf_drivers \
   $(PROJ_DIR)/SDK_components/libraries/util \
   $(PROJ_DIR)/SDK_components/device \
-  $(PROJ_DIR)/SDK_components/nrf_drivers/spi_master \
-  $(PROJ_DIR)/SDK_components/nrf_drivers/timer \
   $(PROJ_DIR)/SDK_components/nrf_drivers/hal \
   $(PROJ_DIR)/SDK_components/nrf_drivers/common \
   $(PROJ_DIR)/SDK_components/nrf_drivers/delay \
@@ -119,7 +124,6 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/uart \
   $(SDK_ROOT)/components/libraries/hci \
   $(SDK_ROOT)/components/libraries/usbd/class/hid/kbd \
-  $(SDK_ROOT)/components/drivers_nrf/spi_slave \
   $(SDK_ROOT)/components/drivers_nrf/lpcomp \
   $(SDK_ROOT)/components/libraries/timer \
   $(SDK_ROOT)/components/drivers_nrf/power \

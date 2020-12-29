@@ -1,38 +1,47 @@
 /*
- * cfg_bsp_ecg_ADS1192.h
+ * hal_timer.h
  *
- *  Created on: 21.10.2020.
+ *  Created on: 19.20.2020.
  *  Author: mario.kodba
  */
 
-#ifndef CFG_BSP_ECG_ADS1192_H_
-#define CFG_BSP_ECG_ADS1192_H_
+#ifndef HAL_TIMER_H_
+#define HAL_TIMER_H_
 
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
+#include <stdint.h>
+#include <stddef.h>
+
+#include "nrf51.h"
+#include "drv_timer.h"
 
 /*******************************************************************************
- *                                  CONSTANTS
+ *                              DEFINES
  ******************************************************************************/
-
 
 /*******************************************************************************
  *                              DATA STRUCTURES
  ******************************************************************************/
 
 /*******************************************************************************
- *                              GLOBAL VARIABLES
+ *                         PUBLIC FUNCTION DECLARATIONS
  ******************************************************************************/
-extern BSP_ECG_ADS1192_config_S ecgDeviceConfig;
-extern BSP_ECG_ADS1192_device_S ecgDevice;
+void HAL_TIMER_setFrequency(NRF_TIMER_Type *tInstance, DRV_TIMER_freq_E frequency);
+void HAL_TIMER_setBitWidth(NRF_TIMER_Type *tInstance, DRV_TIMER_bitWidth_E bitWidth);
+void HAL_TIMER_setMode(NRF_TIMER_Type *tInstance, DRV_TIMER_mode_E mode);
 
-/*******************************************************************************
- *                        PUBLIC FUNCTION DECLARATIONS
- ******************************************************************************/
+void HAL_TIMER_clearEvents(NRF_TIMER_Type *tInstance);
+void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint8_t channel);
+void HAL_TIMER_runTask(NRF_TIMER_Type *tInstance, DRV_TIMER_task_E task);
 
-#endif // #ifndef CFG_BSP_ECG_ADS1192_H_ */
+bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint8_t channel);
+bool HAL_TIMER_checkIntEn(NRF_TIMER_Type *tInstance, uint8_t channel);
+
+uint32_t HAL_TIMER_getValue(NRF_TIMER_Type *tInstance, DRV_TIMER_cc_E channel);
+
+#endif // #ifndef HAL_TIMER_H_
 /*******************************************************************************
  *                          END OF FILE
  ******************************************************************************/
