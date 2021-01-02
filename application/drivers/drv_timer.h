@@ -1,8 +1,8 @@
 /*
  * drv_timer.h
  *
- *  Created on: 18. lis 2020.
- *      Author: Mario
+ *  Created on: 19.12.2020.
+ *  Author: mario.kodba
  */
 
 #ifndef DRV_TIMER_H_
@@ -21,10 +21,10 @@
  *                              ENUMERATIONS
  ******************************************************************************/
 typedef enum DRV_TIMER_err_ENUM {
-    DRV_TIMER_err_NONE      = 0u,
-    DRV_TIMER_err_NULL_PARAM,
-    DRV_TIMER_err_ALREADY_RUNNING,
-    DRV_TIMER_err_NO_TIMER_INSTANCE
+    DRV_TIMER_err_NONE      = 0u,       //!< No error.
+    DRV_TIMER_err_NULL_PARAM,           //!< NULL parameter error.
+    DRV_TIMER_err_ALREADY_RUNNING,      //!< TIMER already running error.
+    DRV_TIMER_err_NO_TIMER_INSTANCE     //!< Invalid TIMER instance error.
 } DRV_TIMER_err_E;
 
 typedef enum DRV_TIMER_freq_ENUM {
@@ -70,6 +70,13 @@ typedef enum DRV_TIMER_task_ENUM {
     DRV_TIMER_task_CAPTURE3 = offsetof(NRF_TIMER_Type, TASKS_CAPTURE[3]), //!< Timer capture[3] task.
 } DRV_TIMER_task_E;
 
+typedef enum DRV_TIMER_event_ENUM {
+    DRV_TIMER_task_COMPARE0 = offsetof(NRF_TIMER_Type, EVENTS_COMPARE[0]),//!< Timer compare[0] event.
+    DRV_TIMER_task_COMPARE1 = offsetof(NRF_TIMER_Type, EVENTS_COMPARE[1]),//!< Timer compare[1] event.
+    DRV_TIMER_task_COMPARE2 = offsetof(NRF_TIMER_Type, EVENTS_COMPARE[2]),//!< Timer compare[2] event.
+    DRV_TIMER_task_COMPARE3 = offsetof(NRF_TIMER_Type, EVENTS_COMPARE[3]) //!< Timer compare[3] event.
+} DRV_TIMER_event_E;
+
 typedef enum DRV_TIMER_cc_ENUM {
     DRV_TIMER_cc_CHANNEL0 = 0,          //!< Timer capture/compare channel 0.
     DRV_TIMER_cc_CHANNEL1,              //!< Timer capture/compare channel 1.
@@ -90,7 +97,13 @@ typedef enum DRV_TIMER_id_ENUM {
 /*******************************************************************************
  *                              DATA STRUCTURES
  ******************************************************************************/
-typedef void (*USER_TIMER_IRQHandler)(DRV_TIMER_cc_E timerEvent, void *context);
+typedef void (*DRV_TIMER_IRQHandler)(DRV_TIMER_cc_E timerEvent, void *context);
+
+typedef struct DRV_TIMER_control_block_STRUCT {
+    DRV_TIMER_IRQHandler callbackFunction;  //!< Callback function for TIMERx interrupt.
+    void *context;                          //!< Context passed to TIMER callback function.
+
+} DRV_TIMER_control_block_S;
 
 typedef struct DRV_TIMER_config_STRUCT {
     NRF_TIMER_Type *timerReg;           //!< Timer registers address base
@@ -99,13 +112,14 @@ typedef struct DRV_TIMER_config_STRUCT {
     DRV_TIMER_bitWidth_E bitWidth;      //!< Timer bit width.
     DRV_TIMER_id_E id;                  //!< Timer instance id.
     uint8_t irqPriority;                //!< Interrupt priority.
+    void *context;                      //!< Context passed to interrupt handler (callback function).
 } DRV_TIMER_config_S;
 
 typedef struct DRV_TIMER_instance_STRUCT {
-    DRV_TIMER_config_S *config;           //!< Timer configuration
+    DRV_TIMER_config_S *config;         //!< Timer configuration
 
-    DRV_TIMER_state_E state;              //!< Current timer state.
-    bool isInitialized;                   //!< Is time instance initialized.
+    DRV_TIMER_state_E state;            //!< Current timer state.
+    bool isInitialized;                 //!< Is time instance initialized.
 } DRV_TIMER_instance_S;
 
 /*******************************************************************************
@@ -113,7 +127,7 @@ typedef struct DRV_TIMER_instance_STRUCT {
  ******************************************************************************/
 void DRV_TIMER_init(DRV_TIMER_instance_S *timerInstance,
         DRV_TIMER_config_S *timerConf,
-        USER_TIMER_IRQHandler irqHandler,
+        DRV_TIMER_IRQHandler irqHandler,
         DRV_TIMER_err_E *outErr);
 void DRV_TIMER_enableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr);
 void DRV_TIMER_disableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr);
@@ -126,6 +140,13 @@ uint32_t DRV_TIMER_captureTimer(DRV_TIMER_instance_S *tInstance,
 uint32_t DRV_TIMER_getTimeDiff(const DRV_TIMER_instance_S *tInstance,
         uint32_t *start,
         uint32_t *stop);
+void DRV_TIMER_compareEnableTimer(DRV_TIMER_instance_S *tInstance,
+        DRV_TIMER_cc_E channel,
+        uint32_t compareValue,
+        DRV_TIMER_err_E *outErr);
+void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
+        DRV_TIMER_cc_E channel,
+        DRV_TIMER_err_E *outErr);
 
 #endif // #ifndef DRV_TIMER_H_
 /*******************************************************************************

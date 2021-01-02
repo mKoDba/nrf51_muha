@@ -11,12 +11,22 @@
 #include "drv_timer.h"
 #include "hal_timer.h"
 
-
 /*******************************************************************************
  *                              DEFINES
  ******************************************************************************/
 #define DRV_TIMER_MAX_VALUE_16_BIT      (65535u)
-#define DRV_TIMER_16MHZ_TIME_RESOLUTION (0.0625f)
+
+//!< Timer time resolution settings
+#define DRV_TIMER_RESOLUTION_16MHZ      (0.0625f)
+#define DRV_TIMER_RESOLUTION_8MHZ       (0.125f)
+#define DRV_TIMER_RESOLUTION_4MHZ       (0.25f)
+#define DRV_TIMER_RESOLUTION_2MHZ       (0.5f)
+#define DRV_TIMER_RESOLUTION_1MHZ       (1.0f)
+#define DRV_TIMER_RESOLUTION_500KHZ     (2.0f)
+#define DRV_TIMER_RESOLUTION_250KHZ     (4.0f)
+#define DRV_TIMER_RESOLUTION_125KHZ     (8.0f)
+#define DRV_TIMER_RESOLUTION_62500HZ    (16.0f)
+#define DRV_TIMER_RESOLUTION_31250HZ    (32.0f)
 
 /*******************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
@@ -31,28 +41,26 @@ static NRF_TIMER_Type *timerInstances[DRV_TIMER_id_COUNT] = {
         NRF_TIMER0, NRF_TIMER1, NRF_TIMER2
 };
 
-static USER_TIMER_IRQHandler DRV_TIMER_USER_IRQHandlers[DRV_TIMER_id_COUNT] = {
-        NULL, NULL, NULL
-};
-
-static bool DRV_TIMER_USER_isInit[DRV_TIMER_id_COUNT] = {
+static bool DRV_TIMER_isInit[DRV_TIMER_id_COUNT] = {
         false, false, false
 };
+
+static DRV_TIMER_control_block_S DRV_TIMER_controlBlock[DRV_TIMER_id_COUNT];
 
 /*******************************************************************************
  *                          PUBLIC FUNCTION DEFINITIONS
  ******************************************************************************/
-//void TIMER0_IRQHandler(void) {
-//    DRV_TIMER_irqHandler(DRV_TIMER_id_0);
-//}
+void TIMER0_IRQHandler(void) {
+    DRV_TIMER_irqHandler(DRV_TIMER_id_0);
+}
 
 void TIMER1_IRQHandler(void) {
     DRV_TIMER_irqHandler(DRV_TIMER_id_1);
 }
 
-//void TIMER2_IRQHandler(void) {
-//    DRV_TIMER_irqHandler(DRV_TIMER_id_2);
-//}
+void TIMER2_IRQHandler(void) {
+    DRV_TIMER_irqHandler(DRV_TIMER_id_2);
+}
 
 /*******************************************************************************
  * @brief Initializes timer instance.
@@ -67,7 +75,7 @@ void TIMER1_IRQHandler(void) {
  ******************************************************************************/
 void DRV_TIMER_init(DRV_TIMER_instance_S *tInstance,
         DRV_TIMER_config_S *timerConf,
-        USER_TIMER_IRQHandler irqHandler,
+        DRV_TIMER_IRQHandler irqHandler,
         DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -76,9 +84,10 @@ void DRV_TIMER_init(DRV_TIMER_instance_S *tInstance,
         // set timer configuration
         tInstance->config = timerConf;
         tInstance->state = DRV_TIMER_state_STOPPED;
-        // TODO: check if this kind of assignment works, or needs pointer to static table member...
-        // set callback function
-        DRV_TIMER_USER_IRQHandlers[tInstance->config->id] = irqHandler;
+        // set callback function and context, if given
+        DRV_TIMER_control_block_S *block = &DRV_TIMER_controlBlock[tInstance->config->id];
+        block->callbackFunction = irqHandler;
+        block->context = tInstance->config->context;
         // clear events for given timer
         HAL_TIMER_clearEvents(tInstance->config->timerReg);
         // enable IRQ
@@ -90,7 +99,7 @@ void DRV_TIMER_init(DRV_TIMER_instance_S *tInstance,
         // set timer bit width
         HAL_TIMER_setBitWidth(tInstance->config->timerReg, tInstance->config->bitWidth);
 
-        DRV_TIMER_USER_isInit[tInstance->config->id] = true;
+        DRV_TIMER_isInit[tInstance->config->id] = true;
         tInstance->isInitialized = true;
     } else {
         err = DRV_TIMER_err_NULL_PARAM;
@@ -115,7 +124,7 @@ void DRV_TIMER_enableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *out
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             if(tInstance->state != DRV_TIMER_state_RUNNING) {
                 HAL_TIMER_runTask(tInstance->config->timerReg, DRV_TIMER_task_START);
                 tInstance->state = DRV_TIMER_state_RUNNING;
@@ -148,7 +157,7 @@ void DRV_TIMER_disableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *ou
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             HAL_TIMER_runTask(tInstance->config->timerReg, DRV_TIMER_task_SHUTDOWN);
             tInstance->state = DRV_TIMER_state_STOPPED;
         } else {
@@ -177,7 +186,7 @@ void DRV_TIMER_pauseTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outE
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             HAL_TIMER_runTask(tInstance->config->timerReg, DRV_TIMER_task_STOP);
             tInstance->state = DRV_TIMER_state_PAUSED;
         } else {
@@ -206,7 +215,7 @@ void DRV_TIMER_clearTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outE
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             HAL_TIMER_runTask(tInstance->config->timerReg, DRV_TIMER_task_CLEAR);
         } else {
             err = DRV_TIMER_err_NO_TIMER_INSTANCE;
@@ -234,7 +243,7 @@ void DRV_TIMER_incrementTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             if(tInstance->config->mode != DRV_TIMER_mode_NORMAL) {
                 HAL_TIMER_runTask(tInstance->config->timerReg, DRV_TIMER_task_COUNT);
             }
@@ -268,7 +277,7 @@ uint32_t DRV_TIMER_captureTimer(DRV_TIMER_instance_S *tInstance,
     uint32_t timerVal = 0u;
 
     if(tInstance != NULL) {
-        if(DRV_TIMER_USER_isInit[tInstance->config->id] == true) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             if(tInstance->config->mode == DRV_TIMER_mode_NORMAL) {
                 HAL_TIMER_runTask(tInstance->config->timerReg,
                         (DRV_TIMER_task_E) ((uint32_t) DRV_TIMER_task_CAPTURE0 + (channel * sizeof(uint32_t))));
@@ -287,6 +296,77 @@ uint32_t DRV_TIMER_captureTimer(DRV_TIMER_instance_S *tInstance,
     }
 
     return timerVal;
+}
+
+/*******************************************************************************
+ * @brief Sets compare value to given CC register and enables interrupt.
+ ******************************************************************************
+ * @param [in]   *timerInstance - pointer to timer instance structure.
+ * @param [in]   channel        - timer CC channel.
+ * @param [in]   compareValue   - compare value.
+ * @param [out]  *outErr        - error parameter.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+void DRV_TIMER_compareEnableTimer(DRV_TIMER_instance_S *tInstance,
+        DRV_TIMER_cc_E channel,
+        uint32_t compareValue,
+        DRV_TIMER_err_E *outErr) {
+
+    DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
+
+    if(tInstance != NULL) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
+            if(tInstance->config->mode == DRV_TIMER_mode_NORMAL) {
+                // enable interrupt on COMPARE event
+                HAL_TIMER_enableInterrupt(tInstance->config->timerReg, channel);
+                HAL_TIMER_writeCompareValue(tInstance->config->timerReg, channel, compareValue);
+            }
+        } else {
+            err = DRV_TIMER_err_NO_TIMER_INSTANCE;
+        }
+    } else {
+        err = DRV_TIMER_err_NULL_PARAM;
+    }
+
+    if(outErr != NULL) {
+        *outErr = err;
+    }
+}
+
+/*******************************************************************************
+ * @brief Disables interrupt on compare event.
+ ******************************************************************************
+ * @param [in]   *timerInstance - pointer to timer instance structure.
+ * @param [in]   channel        - timer CC channel.
+ * @param [out]  *outErr        - error parameter.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
+        DRV_TIMER_cc_E channel,
+        DRV_TIMER_err_E *outErr) {
+
+    DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
+
+    if(tInstance != NULL) {
+        if(DRV_TIMER_isInit[tInstance->config->id] == true) {
+            if(tInstance->config->mode == DRV_TIMER_mode_NORMAL) {
+                // disable interrupt on COMPARE event
+                HAL_TIMER_disableInterrupt(tInstance->config->timerReg, channel);
+            }
+        } else {
+            err = DRV_TIMER_err_NO_TIMER_INSTANCE;
+        }
+    } else {
+        err = DRV_TIMER_err_NULL_PARAM;
+    }
+
+    if(outErr != NULL) {
+        *outErr = err;
+    }
 }
 
 /*******************************************************************************
@@ -329,18 +409,19 @@ uint32_t DRV_TIMER_getTimeDiff(const DRV_TIMER_instance_S *tInstance,
  ******************************************************************************/
 static void DRV_TIMER_irqHandler(DRV_TIMER_id_E timerInstanceId) {
     // handlers are used for COMPARE events only (?)
-    if(DRV_TIMER_USER_isInit[timerInstanceId] == true) {
-        for (uint8_t i = 0; i < (uint8_t) DRV_TIMER_cc_CHANNEL_COUNT; i++) {
+    if(DRV_TIMER_isInit[timerInstanceId] == true) {
+        for (uint8_t i = 0u; i < (uint8_t) DRV_TIMER_cc_CHANNEL_COUNT; i++) {
             // check on which CC channel was interrupt generated
             if(HAL_TIMER_checkIntEn(timerInstances[timerInstanceId], i) &&
                     HAL_TIMER_checkEvent(timerInstances[timerInstanceId], i)) {
+                // get the event
+                DRV_TIMER_event_E event = HAL_TIMER_getEvent(i);
                 // clear event register
                 HAL_TIMER_clearEvent(timerInstances[timerInstanceId], i);
                 // call user provided callback
-                DRV_TIMER_USER_IRQHandlers[timerInstanceId];
+                DRV_TIMER_controlBlock[timerInstanceId].callbackFunction(event, DRV_TIMER_controlBlock[timerInstanceId].context);
             }
         }
-
     }
 }
 
@@ -358,34 +439,34 @@ static float DRV_TIMER_getTimerResolution(const DRV_TIMER_instance_S *tInstance)
 
     switch(tInstance->config->frequency) {
         case DRV_TIMER_freq_16MHz:
-            timeRes = 0.0625f;
+            timeRes = DRV_TIMER_RESOLUTION_16MHZ;
             break;
         case DRV_TIMER_freq_8MHz:
-            timeRes = 0.125f;
+            timeRes = DRV_TIMER_RESOLUTION_8MHZ;
             break;
         case DRV_TIMER_freq_4MHz:
-            timeRes = 0.25f;
+            timeRes = DRV_TIMER_RESOLUTION_4MHZ;
             break;
         case DRV_TIMER_freq_2MHz:
-            timeRes = 0.5f;
+            timeRes = DRV_TIMER_RESOLUTION_2MHZ;
             break;
         case DRV_TIMER_freq_1MHz:
-            timeRes = 1.0f;
+            timeRes = DRV_TIMER_RESOLUTION_1MHZ;
             break;
         case DRV_TIMER_freq_500KHz:
-            timeRes = 2.0f;
+            timeRes = DRV_TIMER_RESOLUTION_500KHZ;
             break;
         case DRV_TIMER_freq_250KHz:
-            timeRes = 4.0f;
+            timeRes = DRV_TIMER_RESOLUTION_250KHZ;
             break;
         case DRV_TIMER_freq_125KHz:
-            timeRes = 8.0f;
+            timeRes = DRV_TIMER_RESOLUTION_125KHZ;
             break;
         case DRV_TIMER_freq_62500Hz:
-            timeRes = 16.0f;
+            timeRes = DRV_TIMER_RESOLUTION_62500HZ;
             break;
         case DRV_TIMER_freq_31250Hz:
-            timeRes = 32.0f;
+            timeRes = DRV_TIMER_RESOLUTION_31250HZ;
             break;
     }
 

@@ -47,7 +47,7 @@ void testTimerHandler(DRV_TIMER_cc_E timerEvent, void *context) {
 }
 
 /*******************************************************************************
- * @brief Initializes GPIOs, drivers, BSP needed for application start.
+ * @brief Initializes GPIOs, drivers, BSP needed for application.
  ******************************************************************************
  * @param [in, out] *error - error parameter.
  ******************************************************************************
@@ -56,23 +56,25 @@ void testTimerHandler(DRV_TIMER_cc_E timerEvent, void *context) {
  ******************************************************************************/
 void NRF51_MUHA_init(ERR_E *outErr) {
 
-    ERR_E localErr = ERR_NONE;
+    ERR_E err = ERR_NONE;
 
-    SEGGER_RTT_printf(0, "Initializing nRF51...\n");
+    SEGGER_RTT_printf(0, "Initializing nRF51-MUHA...\n");
 
     // initialize GPIOs
-    NRF51_MUHA_initGpio(&localErr);
+    NRF51_MUHA_initGpio(&err);
 
-    // initialize NRF peripheral drivers
-    NRF51_MUHA_initDrivers(&localErr);
+    if(err == ERR_NONE) {
+        // initialize NRF peripheral drivers
+        NRF51_MUHA_initDrivers(&err);
+    }
 
-    // initialize BSP components
-    if(localErr == ERR_NONE) {
-        NRF51_MUHA_initBsp(&localErr);
+    if(err == ERR_NONE) {
+        // initialize BSP components
+        NRF51_MUHA_initBsp(&err);
     }
 
     if(outErr != NULL) {
-        *outErr = localErr;
+        *outErr = err;
     }
 }
 
@@ -87,6 +89,10 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 void NRF51_MUHA_start() {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+
+    // start the timer instance
+    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
 
     BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
 
@@ -134,7 +140,7 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 /*******************************************************************************
  * @brief Function initializes NRF51422 peripherals drivers.
  ******************************************************************************
- * @param [in, out] *outErr - error parameter.
+ * @param [out] *outErr - error parameter.
  ******************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
@@ -145,29 +151,14 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
-    // initialize HFCLK needed for TIMER1 instance
+    // initialize HFCLK needed for TIMER instance
     HAL_CLK_hfclkStart();
 
     // initialize TIMER1 instance
-    DRV_TIMER_init(&instanceTimer1, &configTimer1, testTimerHandler, &timerErr);
+    DRV_TIMER_init(&instanceTimer1, &configTimer1, &testTimerHandler, &timerErr);
 
-    if(drvInitErr == ERR_NONE) {
-        // start the timer instance
-        DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
-        if(drvInitErr == ERR_NONE) {
-            // initialize SPI instance
-            DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
-            if(drvInitErr == ERR_NONE) {
-                // other initializations
-            } else {
-                drvInitErr = ERR_DRV_SPI_INIT_FAIL;
-            }
-        } else {
-            drvInitErr = ERR_DRV_TIMER_INIT_FAIL;
-        }
-    } else {
-        drvInitErr = ERR_DRV_TIMER_INIT_FAIL;
-    }
+    // initialize SPI instance
+    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
 
     if(outErr != NULL) {
         *outErr = drvInitErr;
@@ -186,6 +177,7 @@ static void NRF51_MUHA_initBsp(ERR_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
 
+    // initialize ADS1192 ECG device
     BSP_ECG_ADS1192_init(&ecgDevice, &ecgDeviceConfig, &ecgErr);
 
     if(outErr != NULL) {

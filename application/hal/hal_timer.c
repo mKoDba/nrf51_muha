@@ -88,7 +88,7 @@ void HAL_TIMER_clearEvents(NRF_TIMER_Type *tInstance) {
  * @date    20.12.2020.
  ******************************************************************************/
 void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
-    *(volatile uint32_t *)((uint8_t *) tInstance + offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel])) = 0x0UL;
+    *((volatile uint32_t *)((uint8_t *) tInstance + offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]))) = 0x0UL;
 }
 
 /*******************************************************************************
@@ -105,6 +105,18 @@ bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
 }
 
 /*******************************************************************************
+ * @brief Getter function for TIMERx compare[x] event.
+ ******************************************************************************
+ * @param [in]  channel    - compare/capture channel id.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+DRV_TIMER_event_E HAL_TIMER_getEvent(uint8_t channel) {
+    return (DRV_TIMER_event_E) (offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]));
+}
+
+/*******************************************************************************
  * @brief Checks if the event interrupt is active for given timer instance
  *        and CC channel.
  ******************************************************************************
@@ -116,6 +128,48 @@ bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
  ******************************************************************************/
 bool HAL_TIMER_checkIntEn(NRF_TIMER_Type *tInstance, uint8_t channel) {
     return (bool) (tInstance->INTENSET & (HAL_TIMER_INTENSET_MASK << channel));
+}
+
+/*******************************************************************************
+ * @brief Enables interrupt on COMPARE event for given channel.
+ ******************************************************************************
+ * @param [in]  *tInstance - pointer to timer instance.
+ * @param [in]  channel    - compare/capture channel id.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+void HAL_TIMER_enableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel) {
+    tInstance->INTENSET |= (HAL_TIMER_INTENSET_MASK << channel);
+}
+
+/*******************************************************************************
+ * @brief Disables interrupt on COMPARE event for given channel.
+ ******************************************************************************
+ * @param [in]  *tInstance - pointer to timer instance.
+ * @param [in]  channel    - compare/capture channel id.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+void HAL_TIMER_disableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel) {
+    tInstance->INTENSET &= ~(HAL_TIMER_INTENSET_MASK << channel);
+}
+
+/*******************************************************************************
+ * @brief Write compare value to compare channel which will trigger interrupt.
+ ******************************************************************************
+ * @param [in]  *tInstance   - pointer to timer instance.
+ * @param [in]  channel      - compare/capture channel id.
+ * @param [in]  compareValue - compare value.
+ ******************************************************************************
+ * @author  mario.kodba
+ * @date    02.01.2021.
+ ******************************************************************************/
+void HAL_TIMER_writeCompareValue(NRF_TIMER_Type *tInstance,
+        uint8_t channel,
+        uint32_t compareValue) {
+    tInstance->CC[channel] = compareValue;
 }
 
 /*******************************************************************************

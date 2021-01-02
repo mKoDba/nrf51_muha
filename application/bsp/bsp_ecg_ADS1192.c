@@ -305,7 +305,7 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
 
-    // issue read continuous command
+    // issue stop read continuous command
     BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_SDATAC, &ecgErr);
 
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
@@ -341,7 +341,7 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
      * optionally, transform it into voltage amplitude */
     for(uint16_t i = 0, j = 0; i < inDataSize - 1; i += 2, j++) {
         int16_t tmp = *(inData + i + 1) | (*(inData + i) << BSP_ECG_ADS1192_BYTE_SHIFT);
-        //SEGGER_RTT_printf(0, "%d\n", tmp);
+        SEGGER_RTT_printf(0, "%d\n", tmp);
         memcpy((outData + j), &tmp, sizeof(int16_t));
     }
 }
@@ -673,8 +673,8 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
 /*******************************************************************************
  * @brief Starts reading and outputting data received from channel inputs.
  ******************************************************************************
- * @param [in]  *inDevice    - pointer to device structure for ECG driver.
- * @param [out] *outErr      - error parameter.
+ * @param [in]  pin    - GPIOTE pin number.
+ * @param [in]  action - GPIOTE trigger action.
  ******************************************************************************
  * @author  mario.kodba
  * @date    13.12.2020
@@ -682,15 +682,18 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
 void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-
     uint8_t bytes[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0 };
-    // converted data from 8 to 16 bits
+    // converted 16-bits data
     int16_t outData[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME/2] = { 0 };
+
+    // get data bytes from ADS1192
     DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
-    //uint32_t stopRxBlocking = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL1, &timerErr);
+    // convert data to correct format
     BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0],
             BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME,
             &outData[0]);
+
+    // TODO: [mario.kodba 02.01.2021.] Implement sending data over bluetooth
 }
 
 #if (DEBUG == true)
