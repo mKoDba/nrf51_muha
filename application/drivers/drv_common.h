@@ -1,33 +1,29 @@
-/*	header info, to be added
+/*
+ * drv_common.h
  *
- *
- *
+ *  Created on: 19.12.2020.
+ *  Author: mario.kodba
  */
 
+#ifndef DRV_COMMON_H_
+#define DRV_COMMON_H_
 
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
-#include "cfg_nrf_drv_spi.h"
+#include "nrf.h"
 
+#include <stdint.h>
 /*******************************************************************************
- *                              DEFINES
+ *                              DATA STRUCTURES
  ******************************************************************************/
 
 /*******************************************************************************
- *                              GLOBAL VARIABLES
+ *                         PUBLIC FUNCTION DECLARATIONS
  ******************************************************************************/
-BSP_ECG_ADS1192_device_S ecgDevice;
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+void DRV_COMMON_enableIRQPriority(void *type, uint8_t priority);
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_500_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
-
+#endif // #ifndef DRV_COMMON_H_
 /*******************************************************************************
  *                          END OF FILE
  ******************************************************************************/

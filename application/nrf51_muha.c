@@ -14,10 +14,16 @@
 #include "nrf_gpio.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_drv_spi.h"
+#include "nrf_drv_clock.h"
 #include "nrf_error.h"
-
+#include "drv_timer.h"
+#include "drv_spi.h"
+#include "hal_clk.h"
 #include "nrf51_muha.h"
+
 #include "cfg_nrf_drv_spi.h"
+#include "cfg_drv_timer.h"
+#include "cfg_drv_spi.h"
 #include "cfg_bsp_ecg_ADS1192.h"
 #include "cfg_nrf51_muha_pinout.h"
 
@@ -35,8 +41,13 @@ static void NRF51_MUHA_initBsp(ERR_E *outErr);
 /*******************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
  ******************************************************************************/
+void testTimerHandler(DRV_TIMER_cc_E timerEvent, void *context) {
+    static uint32_t ticks;
+    ticks++;
+}
+
 /*******************************************************************************
- * @brief Initializes GPIOs, drivers, BSP needed for application start.
+ * @brief Initializes GPIOs, drivers, BSP needed for application.
  ******************************************************************************
  * @param [in, out] *error - error parameter.
  ******************************************************************************
@@ -45,23 +56,25 @@ static void NRF51_MUHA_initBsp(ERR_E *outErr);
  ******************************************************************************/
 void NRF51_MUHA_init(ERR_E *outErr) {
 
-    ERR_E localErr = ERR_NONE;
+    ERR_E err = ERR_NONE;
 
-    SEGGER_RTT_printf(0, "Initializing nRF51...\n");
+    SEGGER_RTT_printf(0, "Initializing nRF51-MUHA...\n");
 
     // initialize GPIOs
-    NRF51_MUHA_initGpio(&localErr);
+    NRF51_MUHA_initGpio(&err);
 
-    // initialize NRF peripheral drivers
-    NRF51_MUHA_initDrivers(&localErr);
+    if(err == ERR_NONE) {
+        // initialize NRF peripheral drivers
+        NRF51_MUHA_initDrivers(&err);
+    }
 
-    // initialize BSP components
-    if(localErr == ERR_NONE) {
-        NRF51_MUHA_initBsp(&localErr);
+    if(err == ERR_NONE) {
+        // initialize BSP components
+        NRF51_MUHA_initBsp(&err);
     }
 
     if(outErr != NULL) {
-        *outErr = localErr;
+        *outErr = err;
     }
 }
 
@@ -123,7 +136,7 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 /*******************************************************************************
  * @brief Function initializes NRF51422 peripherals drivers.
  ******************************************************************************
- * @param [in, out] *outErr - error parameter.
+ * @param [out] *outErr - error parameter.
  ******************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
@@ -131,29 +144,17 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
     ERR_E drvInitErr = ERR_NONE;
-    ret_code_t spiInitErr;
+    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
-    __disable_irq();
+    // initialize HFCLK needed for TIMER instance
+    HAL_CLK_hfclkStart();
 
-    // initialize TIMER0 instance
-//    timerInitErr = nrf_drv_timer_init(&timer0Instance, &timer0Config, &timer0EventHandler);
-//    if(timerInitErr != NRF_SUCCESS) {
-//        drvInitErr = ERR_DRV_TIMER_INIT_FAIL;
-//    }
+    // initialize TIMER1 instance
+    DRV_TIMER_init(&instanceTimer1, &configTimer1, &testTimerHandler, &timerErr);
 
-
-    // initialize SPI0 instance for ADS1192
-    // if passed handler function, nrf_drv_spi_transfer returns immediately (NON-BLOCKING)
-    spiInitErr = nrf_drv_spi_init(&spi0Instance, &spi0Config, NULL);
-    if(spiInitErr != NRF_SUCCESS) {
-        drvInitErr = ERR_DRV_SPI_INIT_FAIL;
-    }
-
-    __enable_irq();
-
-    if(drvInitErr != ERR_NONE) {
-        // init some other driver
-    }
+    // initialize SPI instance
+    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
 
     if(outErr != NULL) {
         *outErr = drvInitErr;
@@ -163,7 +164,7 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 /*******************************************************************************
  * @brief Function initializes BSP components used by NRF51422 on MUHA board.
  ******************************************************************************
- * @param [in, out] *outErr - error parameter.
+ * @param [out] *outErr - error parameter.
  ******************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
@@ -172,6 +173,7 @@ static void NRF51_MUHA_initBsp(ERR_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
 
+    // initialize ADS1192 ECG device
     BSP_ECG_ADS1192_init(&ecgDevice, &ecgDeviceConfig, &ecgErr);
 
     if(outErr != NULL) {

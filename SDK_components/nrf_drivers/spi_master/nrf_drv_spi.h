@@ -317,22 +317,6 @@ ret_code_t nrf_drv_spi_transfer(nrf_drv_spi_t const * const p_instance,
                                 uint8_t       * p_rx_buffer,
                                 uint8_t         rx_buffer_length);
 
-uint32_t* DRV_SPI_MasterInit(nrf_drv_spi_t *const spi_instance,
-        nrf_drv_spi_config_t const *spi_config);
-
-bool DRV_SPI_MasterTxRxBlocking(nrf_drv_spi_t const *const p_instance,
-        uint8_t const *tx_data,
-        uint16_t transfer_size,
-        uint8_t *rx_data);
-
-bool DRV_SPI_masterTxBlocking(nrf_drv_spi_t const *const p_instance,
-        uint16_t transfer_size,
-        const uint8_t *tx_data);
-
-bool DRV_SPI_masterRxBlocking(nrf_drv_spi_t const *const p_instance,
-        uint16_t transfer_size,
-        uint8_t *rx_data);
-
 /**
  * @brief Function for starting the SPI data transfer with additional option flags.
  *

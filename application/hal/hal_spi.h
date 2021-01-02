@@ -1,52 +1,46 @@
-/*	header info, to be added
+/*
+ * hal_spi.h
  *
- *
- *
+ *  Created on: 27.12.2020.
+ *  Author: mario.kodba
  */
 
+#ifndef HAL_SPI_H_
+#define HAL_SPI_H_
 
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "nrf51_muha.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "nrf51.h"
+#include "drv_spi.h"
 
 /*******************************************************************************
  *                              DEFINES
  ******************************************************************************/
 
 /*******************************************************************************
- *                          PUBLIC FUNCTION DEFINITIONS
+ *                              DATA STRUCTURES
  ******************************************************************************/
-/*******************************************************************************
- * @brief Application main function.
- ******************************************************************************
- * @param None.
- ******************************************************************************
- * @author  mario.kodba
- * @date    18.10.2020.
- ******************************************************************************/
-int main(void) {
-
-    ERR_E error = ERR_NONE;
-
-    NRF51_MUHA_init(&error);
-
-    if(error == ERR_NONE) {
-        NRF51_MUHA_start();
-    }
-
-    while(1) {
-        ;
-    }
-
-    // should not get to here
-    return 0;
-}
 
 /*******************************************************************************
- *                         PRIVATE FUNCTION DEFINITIONS
+ *                         PUBLIC FUNCTION DECLARATIONS
  ******************************************************************************/
+void HAL_SPI_setPins(NRF_SPI_Type *spiStruct,
+        uint32_t sckPin,
+        uint32_t mosiPin,
+        uint32_t misoPin);
+void HAL_SPI_setFrequency(NRF_SPI_Type *spiStruct, DRV_SPI_freq_E frequency);
+void HAL_SPI_setSpiConfiguration(NRF_SPI_Type *spiStruct,
+        DRV_SPI_mode_E mode,
+        DRV_SPI_bitOrder_E bitOrder);
+void HAL_SPI_interruptEnable(NRF_SPI_Type *spiStruct);
+void HAL_SPI_enableSpi(NRF_SPI_Type *spiStruct);
 
+#endif // #ifndef HAL_SPI_H_
 /*******************************************************************************
  *                          END OF FILE
  ******************************************************************************/

@@ -1,8 +1,8 @@
 /*
  * cfg_bsp_ecg_ADS1192.h
  *
- *  Created on: 21. lis 2020.
- *      Author: Mario
+ *  Created on: 21.10.2020.
+ *  Author: mario.kodba
  */
 
 #ifndef CFG_BSP_ECG_ADS1192_H_

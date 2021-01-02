@@ -11,9 +11,11 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "drv_timer.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
-#include "cfg_nrf_drv_spi.h"
+#include "cfg_drv_timer.h"
+#include "cfg_drv_spi.h"
 #include "cfg_nrf51_muha_pinout.h"
 #include "bsp_ecg_ADS1192.h"
 
@@ -120,7 +122,7 @@ static const uint8_t ecgADS1192RegAddr[BSP_ECG_ADS1192_reg_COUNT] = {
 /*******************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  ******************************************************************************/
-static inline void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
+static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
         const uint16_t inDataSize,
         int16_t *outData);
 static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
@@ -303,7 +305,7 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
 
-    // issue read continuous command
+    // issue stop read continuous command
     BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_SDATAC, &ecgErr);
 
     if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
@@ -331,7 +333,7 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
  * @author  mario.kodba
  * @date    05.12.2020
  ******************************************************************************/
-static inline void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
+static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
         const uint16_t inDataSize,
         int16_t *outData) {
 
@@ -359,18 +361,19 @@ static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
-    bool status = false;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
     if(inDevice == NULL) {
         ecgErr = BSP_ECG_ADS1192_err_NULL_PARAM;
     } else {
-        status = DRV_SPI_masterTxBlocking(inDevice->config->spiInstance,
-                         BSP_ECG_ADS1192_SPI_SIZE_SINGLE_BYTE,
-                         &inSpiCmd);
+        DRV_SPI_masterTxBlocking(inDevice->config->spiInstance,
+                &inSpiCmd,
+                BSP_ECG_ADS1192_SPI_SIZE_SINGLE_BYTE,
+                &spiErr);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
-        if(status != true) {
+        if(spiErr != DRV_SPI_err_NONE) {
             ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
         }
     }
@@ -397,10 +400,10 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
     uint8_t opcode[BSP_ECG_ADS1192_SPI_SIZE_WRITE] = { 0u };
     uint8_t regAddr = ecgADS1192RegAddr[inReg];
     uint8_t txBufferLen = BSP_ECG_ADS1192_SPI_SIZE_WRITE;
-    bool status = false;
 
     if((inDevice != NULL) && (inData != NULL)) {
         /* byte format for Read opcode: | 001R RRRR | 000N NNNN | DATA |
@@ -409,13 +412,14 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         opcode[1] = BSP_ECG_ADS1192_SPI_SINGLE_REG;
         opcode[2] = *inData;
 
-        status = DRV_SPI_masterTxBlocking(inDevice->config->spiInstance,
-                         txBufferLen,
-                         &opcode[0]);
+        DRV_SPI_masterTxBlocking(inDevice->config->spiInstance,
+                &opcode[0],
+                txBufferLen,
+                &spiErr);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
-        if(status != true) {
+        if(spiErr != DRV_SPI_err_NONE) {
             ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
         }
     } else {
@@ -442,12 +446,12 @@ static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
     uint8_t opcode[BSP_ECG_ADS1192_SPI_SIZE_READ] = { 0u };
     uint8_t outData[BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET];
     uint8_t rxTxBufferSize = BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET;
     uint8_t regAddr = ecgADS1192RegAddr[inReg];
     uint8_t retVal = 0xFFu;
-    bool status = false;
 
     if(inDevice != NULL) {
         /* byte format for Read opcode: | 001R RRRR | 000N NNNN |
@@ -456,14 +460,15 @@ static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         opcode[1] = BSP_ECG_ADS1192_SPI_SINGLE_REG;
 
         // start SPI transfer
-        status = DRV_SPI_MasterTxRxBlocking(inDevice->config->spiInstance,
-                         &opcode[0],
-                         rxTxBufferSize,
-                         &outData[0]);
+        DRV_SPI_masterTxRxBlocking(inDevice->config->spiInstance,
+                &opcode[0],
+                rxTxBufferSize,
+                &outData[0],
+                &spiErr);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
-        if(status != true) {
+        if(spiErr != DRV_SPI_err_NONE) {
             ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
         } else {
             // return register value
@@ -603,16 +608,17 @@ static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
-    bool status = false;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
     if((inDevice != NULL) && (outData != NULL)) {
-        status = DRV_SPI_masterRxBlocking(inDevice->config->spiInstance,
-                         inSize,
-                         &outData[0]);
+        DRV_SPI_masterRxBlocking(inDevice->config->spiInstance,
+                inSize,
+                &outData[0],
+                &spiErr);
         // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
         nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
 
-        if(status != true) {
+        if(spiErr != DRV_SPI_err_NONE) {
             ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
         }
     } else {
@@ -667,21 +673,27 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
 /*******************************************************************************
  * @brief Starts reading and outputting data received from channel inputs.
  ******************************************************************************
- * @param [in]  *inDevice    - pointer to device structure for ECG driver.
- * @param [out] *outErr      - error parameter.
+ * @param [in]  pin    - GPIOTE pin number.
+ * @param [in]  action - GPIOTE trigger action.
  ******************************************************************************
  * @author  mario.kodba
  * @date    13.12.2020
  ******************************************************************************/
 void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
     uint8_t bytes[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0 };
-    // converted data from 8 to 16 bits
+    // converted 16-bits data
     int16_t outData[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME/2] = { 0 };
-    DRV_SPI_masterRxBlocking(&spi0Instance, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0]);
+
+    // get data bytes from ADS1192
+    DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
+    // convert data to correct format
     BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0],
             BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME,
             &outData[0]);
+
+    // TODO: [mario.kodba 02.01.2021.] Implement sending data over bluetooth
 }
 
 #if (DEBUG == true)

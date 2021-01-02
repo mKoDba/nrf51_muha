@@ -1,4 +1,4 @@
-/*	header info, to be added
+/*  header info, to be added
  *
  *
  *
@@ -8,43 +8,39 @@
 /*******************************************************************************
  *                              INCLUDE FILES
  ******************************************************************************/
-#include "nrf51_muha.h"
+#include "nrf51.h"
+#include "cfg_drv_spi.h"
+
+#include "cfg_nrf51_muha_pinout.h"
 
 /*******************************************************************************
  *                              DEFINES
  ******************************************************************************/
 
 /*******************************************************************************
- *                          PUBLIC FUNCTION DEFINITIONS
+ *                              GLOBAL VARIABLES
  ******************************************************************************/
-/*******************************************************************************
- * @brief Application main function.
- ******************************************************************************
- * @param None.
- ******************************************************************************
- * @author  mario.kodba
- * @date    18.10.2020.
- ******************************************************************************/
-int main(void) {
+DRV_SPI_config_S configSpi0 = {
+        .id = DRV_SPI_id_0,
+        .sckPin = ECG_CLK,
+        .mosiPin = ECG_DIN,
+        .misoPin = ECG_DOUT,
+        .ssPin = ECG_CS,
+        .irqPriority = 3u,
+        .orc = 0x00u,
+        .frequency = DRV_SPI_freq_1M,
+        .mode = DRV_SPI_mode_1,
+        .bitOrder = DRV_SPI_bitOrder_MSB_FIRST
+};
 
-    ERR_E error = ERR_NONE;
-
-    NRF51_MUHA_init(&error);
-
-    if(error == ERR_NONE) {
-        NRF51_MUHA_start();
-    }
-
-    while(1) {
-        ;
-    }
-
-    // should not get to here
-    return 0;
-}
+DRV_SPI_instance_S instanceSpi0 = {
+        .spiStruct          = NRF_SPI0,             //!< SPI peripheral registers
+        .irq                = SPI0_TWI0_IRQn,       //!< SPI instance IRQ number
+        .isInitialized      = false
+};
 
 /*******************************************************************************
- *                         PRIVATE FUNCTION DEFINITIONS
+ *                          END OF FILE
  ******************************************************************************/
 
 /*******************************************************************************

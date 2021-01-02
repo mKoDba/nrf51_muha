@@ -2,7 +2,7 @@
  * nrf51_muha.h
  *
  *  Created on: 18. lis 2020.
- *      Author: Mario
+ *  Author: mario.kodba
  */
 
 #ifndef NRF51_MUHA_H_
