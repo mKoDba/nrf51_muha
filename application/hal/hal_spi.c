@@ -19,8 +19,8 @@
 #define HAL_SPI_CPHA_LEADING            (0UL)
 #define HAL_SPI_CPHA_TRAILING           (1UL)
 
-#define HAL_SPI_INTERRUPT_ENABLE        (4UL)
-#define HAL_SPI_INSTANCE_ENABLE         (1UL)
+#define HAL_SPI_INTERRUPT_ENABLE        (0x1UL << 2UL)
+#define HAL_SPI_INSTANCE_ENABLE         (0x01UL)
 
 /*******************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS

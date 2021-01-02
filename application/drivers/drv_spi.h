@@ -64,7 +64,13 @@ typedef enum DRV_SPI_id_ENUM {
 /*******************************************************************************
  *                              DATA STRUCTURES
  ******************************************************************************/
-typedef void (*USER_SPI_IRQHandler)(DRV_SPI_event_E *event, void *context);
+typedef void (*DRV_SPI_IRQHandler)(DRV_SPI_event_E *event, void *context);
+
+typedef struct DRV_SPI_control_block_STRUCT {
+    DRV_SPI_IRQHandler callbackFunction;                //!< Callback function for SPIx interrupt.
+    void *context;                                      //!< Context passed to SPI callback function.
+
+} DRV_SPI_control_block_S;
 
 typedef struct DRV_SPI_config_STRUCT {
     uint8_t id;                                         //!< SPI instance ID.
@@ -79,6 +85,7 @@ typedef struct DRV_SPI_config_STRUCT {
     DRV_SPI_freq_E frequency;                           //!< SPI frequency.
     DRV_SPI_mode_E mode;                                //!< SPI mode.
     DRV_SPI_bitOrder_E bitOrder;                        //!< SPI bit order.
+    void *context;                                      //!< Context passed to interrupt handler (callback function).
 } DRV_SPI_config_S;
 
 typedef struct DRV_SPI_instance_STRUCT {
@@ -95,7 +102,7 @@ typedef struct DRV_SPI_instance_STRUCT {
  ******************************************************************************/
 void DRV_SPI_init(DRV_SPI_instance_S *spiInstance,
         DRV_SPI_config_S *spiConfig,
-        USER_SPI_IRQHandler irqHandler,
+        DRV_SPI_IRQHandler irqHandler,
         DRV_SPI_err_E *outErr);
 void DRV_SPI_masterTxRxBlocking(const DRV_SPI_instance_S *spiInstance,
         const uint8_t *inTxData,

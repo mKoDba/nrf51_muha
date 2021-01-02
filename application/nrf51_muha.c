@@ -89,10 +89,6 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 void NRF51_MUHA_start() {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
-    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
-
-    // start the timer instance
-    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
 
     BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
 

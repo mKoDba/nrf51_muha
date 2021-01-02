@@ -22,7 +22,7 @@ DRV_TIMER_instance_S instanceTimer1;
 DRV_TIMER_config_S configTimer1 = {
         .timerReg = NRF_TIMER1,
         .id = DRV_TIMER_id_1,
-        .frequency = DRV_TIMER_freq_8MHz,
+        .frequency = DRV_TIMER_freq_4MHz,
         .mode = DRV_TIMER_mode_NORMAL,
         .bitWidth = DRV_TIMER_bitWidth_16,
         .irqPriority = 3u

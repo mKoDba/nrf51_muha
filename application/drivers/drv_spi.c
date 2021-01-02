@@ -19,9 +19,7 @@
 /*******************************************************************************
  *                           GLOBAL VARIABLES
  ******************************************************************************/
-static USER_SPI_IRQHandler DRV_SPI_USER_IRQHandlers[DRV_SPI_id_COUNT] = {
-        NULL, NULL
-};
+static DRV_SPI_control_block_S DRV_SPI_controlBlock[DRV_SPI_id_COUNT];
 
 /*******************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
@@ -44,7 +42,7 @@ static void DRV_SPI_initPins(DRV_SPI_instance_S *spiInstance);
  ******************************************************************************/
 void DRV_SPI_init(DRV_SPI_instance_S *spiInstance,
         DRV_SPI_config_S *spiConfig,
-        USER_SPI_IRQHandler irqHandler,
+        DRV_SPI_IRQHandler irqHandler,
         DRV_SPI_err_E *outErr) {
 
     DRV_SPI_err_E err = DRV_SPI_err_NONE;
@@ -52,13 +50,14 @@ void DRV_SPI_init(DRV_SPI_instance_S *spiInstance,
     if(spiInstance != NULL && spiConfig != NULL) {
         // set SPI configuration
         spiInstance->config = spiConfig;
-        // TODO: check if this kind of assignment works, or needs pointer to static table member...
-        // set callback function
-        DRV_SPI_USER_IRQHandlers[spiInstance->config->id] = irqHandler;
-        // SPI pin setup
+        // set callback function and context, if given
+        DRV_SPI_control_block_S *block = &DRV_SPI_controlBlock[spiInstance->config->id];
+        block->callbackFunction = irqHandler;
+        block->context = spiInstance->config->context;
+        // SPI pins setup
         DRV_SPI_initPins(spiInstance);
 
-        // configure actual SPI registers
+        // configure actual SPI instance registers
         NRF_SPI_Type *spi = (NRF_SPI_Type *) spiInstance->spiStruct;
 
         HAL_SPI_setPins(spi,
@@ -77,7 +76,9 @@ void DRV_SPI_init(DRV_SPI_instance_S *spiInstance,
         // enable SPI instance
         HAL_SPI_enableSpi(spi);
 
-        DRV_COMMON_enableIRQPriority(&spiInstance->irq, spiInstance->config->irqPriority);
+        if(irqHandler) {
+            DRV_COMMON_enableIRQPriority(&spiInstance->irq, spiInstance->config->irqPriority);
+        }
         if(err == DRV_SPI_err_NONE) {
             spiInstance->isInitialized = true;
         }
@@ -181,8 +182,9 @@ void DRV_SPI_masterTxBlocking(const DRV_SPI_instance_S *spiInstance,
 
         // enable slave (slave select active low)
         nrf_gpio_pin_clear(spiInstance->config->ssPin);
+
         // clear the event to be ready to receive next messages
-        SPI->EVENTS_READY = 0;
+        SPI->EVENTS_READY = 0u;
         SPI->TXD = (uint32_t)*inTxData++;
 
         while(--inSize) {
@@ -199,7 +201,7 @@ void DRV_SPI_masterTxBlocking(const DRV_SPI_instance_S *spiInstance,
         // read in last byte
         dummyRead = SPI->RXD;
 
-        // disable slave (slave select active low)
+        // disable slave (set SS to high)
         nrf_gpio_pin_set(spiInstance->config->ssPin);
     } else {
         spiErr = DRV_SPI_err_NULL_PARAM;
@@ -298,6 +300,10 @@ static void DRV_SPI_initPins(DRV_SPI_instance_S *spiInstance) {
 
     // setup MISO pin
     nrf_gpio_cfg_input(spiInstance->config->misoPin, NRF_GPIO_PIN_NOPULL);
+
+    // set SS to inactive
+    nrf_gpio_pin_set(spiInstance->config->ssPin);
+    nrf_gpio_cfg_output(spiInstance->config->ssPin);
 }
 
 /*******************************************************************************
