@@ -1,42 +1,56 @@
-/*	header info, to be added
+/***********************************************************************************************//**
+ * Copyright 2021 Mario Kodba
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ***************************************************************************************************
+ * @file    drv_timer.c
+ * @author  mario.kodba
+ * @brief   NRF51 TIMER module functionality source file.
+ **************************************************************************************************/
 
 
-/*******************************************************************************
+/***************************************************************************************************
  *                              INCLUDE FILES
- ******************************************************************************/
+ **************************************************************************************************/
 #include "drv_timer.h"
 #include "hal_timer.h"
 
-/*******************************************************************************
+/***************************************************************************************************
  *                              DEFINES
- ******************************************************************************/
+ **************************************************************************************************/
 #define DRV_TIMER_MAX_VALUE_16_BIT      (65535u)
 
 //!< Timer time resolution settings
-#define DRV_TIMER_RESOLUTION_16MHZ      (0.0625f)
-#define DRV_TIMER_RESOLUTION_8MHZ       (0.125f)
-#define DRV_TIMER_RESOLUTION_4MHZ       (0.25f)
-#define DRV_TIMER_RESOLUTION_2MHZ       (0.5f)
-#define DRV_TIMER_RESOLUTION_1MHZ       (1.0f)
-#define DRV_TIMER_RESOLUTION_500KHZ     (2.0f)
-#define DRV_TIMER_RESOLUTION_250KHZ     (4.0f)
-#define DRV_TIMER_RESOLUTION_125KHZ     (8.0f)
-#define DRV_TIMER_RESOLUTION_62500HZ    (16.0f)
-#define DRV_TIMER_RESOLUTION_31250HZ    (32.0f)
+#define DRV_TIMER_RESOLUTION_16MHZ      (0.0625f)       //!< TIMER resolution with 16MHz
+#define DRV_TIMER_RESOLUTION_8MHZ       (0.125f)        //!< TIMER resolution with 8MHz
+#define DRV_TIMER_RESOLUTION_4MHZ       (0.25f)         //!< TIMER resolution with 4MHz
+#define DRV_TIMER_RESOLUTION_2MHZ       (0.5f)          //!< TIMER resolution with 2MHz
+#define DRV_TIMER_RESOLUTION_1MHZ       (1.0f)          //!< TIMER resolution with 1MHz
+#define DRV_TIMER_RESOLUTION_500KHZ     (2.0f)          //!< TIMER resolution with 500kHz
+#define DRV_TIMER_RESOLUTION_250KHZ     (4.0f)          //!< TIMER resolution with 250KHz
+#define DRV_TIMER_RESOLUTION_125KHZ     (8.0f)          //!< TIMER resolution with 125KHz
+#define DRV_TIMER_RESOLUTION_62500HZ    (16.0f)         //!< TIMER resolution with 62500Hz
+#define DRV_TIMER_RESOLUTION_31250HZ    (32.0f)         //!< TIMER resolution with 31250Hz
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
- ******************************************************************************/
+ **************************************************************************************************/
 static void DRV_TIMER_irqHandler(DRV_TIMER_id_E timerInstanceId);
 static float DRV_TIMER_getTimerResolution(const DRV_TIMER_instance_S *tInstance);
 
-/*******************************************************************************
+/***************************************************************************************************
  *                           GLOBAL VARIABLES
- ******************************************************************************/
+ **************************************************************************************************/
 static NRF_TIMER_Type *timerInstances[DRV_TIMER_id_COUNT] = {
         NRF_TIMER0, NRF_TIMER1, NRF_TIMER2
 };
@@ -47,32 +61,56 @@ static bool DRV_TIMER_isInit[DRV_TIMER_id_COUNT] = {
 
 static DRV_TIMER_control_block_S DRV_TIMER_controlBlock[DRV_TIMER_id_COUNT];
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          PUBLIC FUNCTION DEFINITIONS
- ******************************************************************************/
+ **************************************************************************************************/
+/***********************************************************************************************//**
+ * @brief TIMER0 IRQ Handler.
+ ***************************************************************************************************
+ * @param [in]  - None.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    20.12.2020.
+ **************************************************************************************************/
 void TIMER0_IRQHandler(void) {
     DRV_TIMER_irqHandler(DRV_TIMER_id_0);
 }
 
+/***********************************************************************************************//**
+ * @brief TIMER1 IRQ Handler.
+ ***************************************************************************************************
+ * @param [in]  - None.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    20.12.2020.
+ **************************************************************************************************/
 void TIMER1_IRQHandler(void) {
     DRV_TIMER_irqHandler(DRV_TIMER_id_1);
 }
 
+/***********************************************************************************************//**
+ * @brief TIMER2 IRQ Handler.
+ ***************************************************************************************************
+ * @param [in]  - None.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    20.12.2020.
+ **************************************************************************************************/
 void TIMER2_IRQHandler(void) {
     DRV_TIMER_irqHandler(DRV_TIMER_id_2);
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Initializes timer instance.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
- * @param [in]   *timerConfig   - pointer to timer configuration structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
+ * @param [in]   *timerConf     - pointer to timer configuration structure.
  * @param [in]   irqHandler     - function pointer to user defined IRQ handler.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_init(DRV_TIMER_instance_S *tInstance,
         DRV_TIMER_config_S *timerConf,
         DRV_TIMER_IRQHandler irqHandler,
@@ -110,15 +148,15 @@ void DRV_TIMER_init(DRV_TIMER_instance_S *tInstance,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Triggers timer START task, enabling timer instance.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_enableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -143,15 +181,15 @@ void DRV_TIMER_enableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *out
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Triggers timer SHUTDOWN task, disabling timer instance.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_disableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -172,15 +210,15 @@ void DRV_TIMER_disableTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *ou
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Triggers timer STOP task.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_pauseTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -201,15 +239,15 @@ void DRV_TIMER_pauseTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outE
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Triggers timer CLEAR task.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_clearTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -229,15 +267,15 @@ void DRV_TIMER_clearTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outE
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Triggers timer COUNT task.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    19.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_incrementTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *outErr) {
 
     DRV_TIMER_err_E err = DRV_TIMER_err_NONE;
@@ -259,16 +297,16 @@ void DRV_TIMER_incrementTimer(DRV_TIMER_instance_S *tInstance, DRV_TIMER_err_E *
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Captures current timer value to one of its CC[n] registers.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [in]   channel        - timer CC channel.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    20.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 uint32_t DRV_TIMER_captureTimer(DRV_TIMER_instance_S *tInstance,
         DRV_TIMER_cc_E channel,
         DRV_TIMER_err_E *outErr) {
@@ -298,17 +336,17 @@ uint32_t DRV_TIMER_captureTimer(DRV_TIMER_instance_S *tInstance,
     return timerVal;
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Sets compare value to given CC register and enables interrupt.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [in]   channel        - timer CC channel.
  * @param [in]   compareValue   - compare value.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    02.01.2021.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_compareEnableTimer(DRV_TIMER_instance_S *tInstance,
         DRV_TIMER_cc_E channel,
         uint32_t compareValue,
@@ -335,16 +373,16 @@ void DRV_TIMER_compareEnableTimer(DRV_TIMER_instance_S *tInstance,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Disables interrupt on compare event.
- ******************************************************************************
- * @param [in]   *timerInstance - pointer to timer instance structure.
+ ***************************************************************************************************
+ * @param [in]   *tInstance     - pointer to timer instance structure.
  * @param [in]   channel        - timer CC channel.
  * @param [out]  *outErr        - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    02.01.2021.
- ******************************************************************************/
+ **************************************************************************************************/
 void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
         DRV_TIMER_cc_E channel,
         DRV_TIMER_err_E *outErr) {
@@ -369,16 +407,16 @@ void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function returns time difference in us between two time measurements.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]   *tInstance  - pointer to timer instance structure.
  * @param [in]   *start      - first timer value.
  * @param [in]   *stop       - second timer value.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    28.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 uint32_t DRV_TIMER_getTimeDiff(const DRV_TIMER_instance_S *tInstance,
         uint32_t *start,
         uint32_t *stop) {
@@ -396,17 +434,17 @@ uint32_t DRV_TIMER_getTimeDiff(const DRV_TIMER_instance_S *tInstance,
     return (uint32_t) realTimeUs;
 }
 
-/*******************************************************************************
+/***************************************************************************************************
  *                         PRIVATE FUNCTION DEFINITIONS
  ******************************************************************************/
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Common callback function for timers that calls individual callback.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]   timerInstanceId - timer instance id that requested interrupt.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    20.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 static void DRV_TIMER_irqHandler(DRV_TIMER_id_E timerInstanceId) {
     // handlers are used for COMPARE events only (?)
     if(DRV_TIMER_isInit[timerInstanceId] == true) {
@@ -425,14 +463,14 @@ static void DRV_TIMER_irqHandler(DRV_TIMER_id_E timerInstanceId) {
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Getter function for timer instance time resolution.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]   *tInstance - pointer to timer instance structure.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    28.12.2020.
- ******************************************************************************/
+ **************************************************************************************************/
 static float DRV_TIMER_getTimerResolution(const DRV_TIMER_instance_S *tInstance) {
 
     float timeRes = 0.0f;
@@ -474,6 +512,6 @@ static float DRV_TIMER_getTimerResolution(const DRV_TIMER_instance_S *tInstance)
 
 }
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          END OF FILE
- ******************************************************************************/
+ **************************************************************************************************/
