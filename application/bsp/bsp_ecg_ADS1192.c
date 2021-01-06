@@ -1,16 +1,31 @@
-/*	header info, to be added
+/***********************************************************************************************//**
+ * Copyright 2021 Mario Kodba
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ***************************************************************************************************
+ * @file    bsp_ecg_ADS1192.c
+ * @author  mario.kodba
+ * @brief   ADS1192 ECG device functionality source file.
+ **************************************************************************************************/
 
 
-/*******************************************************************************
+/***************************************************************************************************
  *                              INCLUDE FILES
- ******************************************************************************/
+ **************************************************************************************************/
 #include <stddef.h>
 #include <string.h>
 
+#include "SEGGER_RTT.h"
 #include "drv_timer.h"
 #include "nrf_delay.h"
 #include "nrf_gpio.h"
@@ -19,14 +34,14 @@
 #include "cfg_nrf51_muha_pinout.h"
 #include "bsp_ecg_ADS1192.h"
 
-/*******************************************************************************
+/***************************************************************************************************
  *                              DEFINES
- ******************************************************************************/
-//! ADC constants
+ **************************************************************************************************/
+// ADC constants
 #define BSP_ECG_ADS1192_ADC_REF_VOLTAGE         (2.42f) //!< ADC reference voltage
 #define BSP_ECG_ADS1192_ADC_MAX_VALUE           (32767) //!< Maximal ADC value (2^15 - 1)
 
-//! ECG ADS1192 SPI commands
+// ECG ADS1192 SPI commands
 #define BSP_ECG_ADS1192_SPI_WAKEUP              (0x02u) //!< Wake-up from standby mode
 #define BSP_ECG_ADS1192_SPI_STANDBY             (0x04u) //!< Enter standby mode
 #define BSP_ECG_ADS1192_SPI_RESET               (0x06u) //!< Reset the device
@@ -37,7 +52,7 @@
 #define BSP_ECG_ADS1192_SPI_SDATAC              (0x11u) //!< Stop Read Data Continuous
 #define BSP_ECG_ADS1192_SPI_RDATA               (0x12u) //!< Read data by command
 
-//! ECG ADS1192 SPI constants
+// ECG ADS1192 SPI constants
 #define BSP_ECG_ADS1192_SPI_READ_CMD            (0x20u) //!< SPI read command
 #define BSP_ECG_ADS1192_SPI_WRITE_CMD           (0x40u) //!< SPI write command
 #define BSP_ECG_ADS1192_SPI_SIZE_READ           (2u)    //!< SPI Read command size (bytes)
@@ -50,7 +65,7 @@
 #define BSP_ECG_ADS1192_SPI_REG_VALUE_INDEX     (2u)    //!< SPI register value index
 
 
-//! ECG ADS1192 Time constants
+// ECG ADS1192 Time constants
 #define BSP_ECG_ADS1192_WAIT_TIME_8_US          (8u)    //!< 8 us wait time
 #define BSP_ECG_ADS1192_INIT_WAIT_TIME_4_TCLK   (8u)    //!< 4 tCLK time period (us)
 #define BSP_ECG_ADS1192_INIT_WAIT_TIME_18_TCLK  (36u)   //!< 18 tCLK time period (us)
@@ -59,19 +74,19 @@
 #define BSP_ECG_ADS1192_INIT_OSC_WAIT_TIME_US   (32u)   //!< Internal oscillator wait time (us)
 #define BSP_ECG_ADS1192_INIT_WAIT_TIME_1_MS     (1000u) //!< 1ms wait time
 #define BSP_ECG_ADS1192_INIT_WAIT_TIME_200_MS   (200000u) //!< 200ms wait time
-#define BSP_ECG_ADS1192_WAIT_TIME_OFFSETCAL_MS  (310u)  //! Offset calibration wait time (ms)
+#define BSP_ECG_ADS1192_WAIT_TIME_OFFSETCAL_MS  (310u)  //!< Offset calibration wait time (ms)
 
-//! ECG ADS1192 bit manipulation constants
+// ECG ADS1192 bit manipulation constants
 #define BSP_ECG_ADS1192_LEAD_OFF_MASK           (0x0Fu) //!< Channel 1 and 2 Lead-off detection
 #define BSP_ECG_ADS1192_BYTE_SHIFT              (8u)    //!< Byte shift value
 
-//! ECG ADS1192 temperature constants
+// ECG ADS1192 temperature constants
 #define BSP_ECG_ADS1192_TEMP_CONST_1            (168)   //!< Temperature constant 1
 #define BSP_ECG_ADS1192_TEMP_CONST_2            (394)   //!< Temperature constant 2
 #define BSP_ECG_ADS1192_TEMP_CONST_3            (25)    //!< Temperature constant 3
 #define BSP_ECG_ADS1192_TEMP_BIT_MASK           (8u)    //!< Temperature bit mask
 
-//! ECG ADS1192 register values
+// ECG ADS1192 register values
 #define BSP_ECG_ADS1192_LEAD_OFF_BOTH_CHANNELS  (0x0Fu) //!< Register value for lead-off detection
 #define BSP_ECG_ADS1192_LEAD_OFF_THRESHOLD      (0x1Cu) //!< Threshold value for lead-off detection
 #define BSP_ECG_ADS1192_RLD_OFF_BOTH_CHANNELS   (0x1Fu) //!< Register value for RLD-off detection
@@ -84,7 +99,7 @@
 #define BSP_ECG_ADS1192_TEST_SIGNAL_DC          (0u)    //!< Set test signal to DC
 #define BSP_ECG_ADS1192_TEST_SIGNAL_1HZ         (1u)    //!< Set test signal to 1Hz
 
-//! ECG ADS1192 register addresses
+// ECG ADS1192 register addresses
 #define BSP_ECG_ADS1192_REG_ADDR_ID             (0x0u)  //!< ID Control register
 // global settings across channels
 #define BSP_ECG_ADS1192_REG_ADDR_CONFIG_1       (0x1u)  //!< Configuration register 1
@@ -101,9 +116,9 @@
 #define BSP_ECG_ADS1192_REG_ADDR_MISC_2         (0xAu)  //!< Miscellaneous Control register 2
 #define BSP_ECG_ADS1192_REG_ADDR_GPIO           (0xBu)  //!< General-Purpose IO register
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          GLOBAL VARIABLES
- ******************************************************************************/
+ **************************************************************************************************/
 static const uint8_t ecgADS1192RegAddr[BSP_ECG_ADS1192_reg_COUNT] = {
         BSP_ECG_ADS1192_REG_ADDR_ID,
         BSP_ECG_ADS1192_REG_ADDR_CONFIG_1,
@@ -119,9 +134,9 @@ static const uint8_t ecgADS1192RegAddr[BSP_ECG_ADS1192_reg_COUNT] = {
         BSP_ECG_ADS1192_REG_ADDR_GPIO
 };
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
- ******************************************************************************/
+ **************************************************************************************************/
 static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
         const uint16_t inDataSize,
         int16_t *outData);
@@ -161,19 +176,19 @@ static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
 #endif // #if (DEBUG == true)
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          PUBLIC FUNCTION DEFINITIONS
- ******************************************************************************/
-/*******************************************************************************
+ **************************************************************************************************/
+/***********************************************************************************************//**
  * @brief Function initializes ECG ADS1192 component.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice - pointer to device structure for ECG driver.
  * @param [in]  *inConfig - configuration structure for ECG driver.
  * @param [out] *outErr   - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    21.10.2020
- ******************************************************************************/
+ **************************************************************************************************/
 void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_config_S *inConfig,
         BSP_ECG_ADS1192_err_E *outErr) {
@@ -263,15 +278,15 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Starts reading and outputting data received from channel inputs.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 void BSP_ECG_ADS1192_startEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -290,16 +305,16 @@ void BSP_ECG_ADS1192_startEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Stops reading and outputting data from channels and disables DRDY
  *        interrupt.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    18.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -320,19 +335,19 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
 
 /*******************************************************************************
  *                         PRIVATE FUNCTION DEFINITIONS
- ******************************************************************************/
-/*******************************************************************************
+ **************************************************************************************************/
+/***********************************************************************************************//**
  * @brief Function for converting output signal into usable value.
  * @details Converts 8-bit output signal array into correct 16-bit
  *          twos-complement values (amplitudes).
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inData    - pointer to input data array.
  * @param [in]  inDataSize - input data array size.
  * @param [out] *outData   - pointer to output data array.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    05.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
         const uint16_t inDataSize,
         int16_t *outData) {
@@ -346,16 +361,16 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function sends predefined SPI command to the device.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice - pointer to device structure for ECG driver.
  * @param [in]  inSpiCmd  - SPI command.
  * @param [out] *outErr   - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    24.10.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
         const uint8_t inSpiCmd,
         BSP_ECG_ADS1192_err_E *outErr) {
@@ -383,17 +398,17 @@ static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function for writing to single register of ADS1192.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [in]  inReg        - register address.
  * @param [in]  *inData      - pointer to data to be sent.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    21.10.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         const BSP_ECG_ADS1192_reg_E inReg,
         const uint8_t *inData,
@@ -431,16 +446,16 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function for reading from single register of ADS1192.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [in]  inReg        - register address to read from.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    21.10.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         const BSP_ECG_ADS1192_reg_E inReg,
         BSP_ECG_ADS1192_err_E *outErr) {
@@ -486,17 +501,17 @@ static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
 
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function enables PGA calibration for ADS1192.
  * @details If offset calibration enabled and OFFSETCAL SPI command is sent,
  *          it takes at least 305ms for device to calibrate properly.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    12.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_enablePgaCalibration(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -513,16 +528,16 @@ static void BSP_ECG_ADS1192_enablePgaCalibration(BSP_ECG_ADS1192_device_S *inDev
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function sets conversion (SPS) rate for ADS1192.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [in]  inSps        - wanted conversion rate (SPS) for device.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    12.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_setConversionRate(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_convRate_E inSps,
         BSP_ECG_ADS1192_err_E *outErr) {
@@ -541,15 +556,15 @@ static void BSP_ECG_ADS1192_setConversionRate(BSP_ECG_ADS1192_device_S *inDevice
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Registers setup for normal electrode input.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_setNormalElectrodeRead(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -591,17 +606,17 @@ static void BSP_ECG_ADS1192_setNormalElectrodeRead(BSP_ECG_ADS1192_device_S *inD
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function for reading data shifted out of ADS1192.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [in]  inSize       - length (in bytes) of data to be read.
  * @param [out] *outData     - pointer to data to be read.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    01.11.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
         const uint16_t inSize,
         uint8_t *outData,
@@ -630,15 +645,15 @@ static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Sends reset impulse on device initialization and resets registers.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    08.11.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -670,15 +685,15 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Starts reading and outputting data received from channel inputs.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  pin    - GPIOTE pin number.
  * @param [in]  action - GPIOTE trigger action.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
@@ -697,15 +712,15 @@ void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_pol
 }
 
 #if (DEBUG == true)
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Sets device MUX to read PCB temperature from device sensor.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.11.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -766,17 +781,17 @@ static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function configures registers to output test signal.
  * @details Sets output of both channels to signal with amplitude
  *          +-(VREFP - VREFN) / 2420. In this case, VREFP = 2.42V, VREFN = 0V.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.11.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -843,15 +858,15 @@ static void BSP_ECG_ADS1192_readTestSignal(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Sets configuration to output supply voltage values on output.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    03.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_readSupplyMeasurement(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -936,15 +951,15 @@ static void BSP_ECG_ADS1192_readSupplyMeasurement(BSP_ECG_ADS1192_device_S *inDe
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Detects if any of the electrodes is disconnected.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    29.11.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -1004,15 +1019,15 @@ static void BSP_ECG_ADS1192_detectLeadOff(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/*******************************************************************************
+/***********************************************************************************************//**
  * @brief Function detects if Right Leg Drive (RLD) electrode is disconnected.
- ******************************************************************************
+ ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
  * @param [out] *outErr      - error parameter.
- ******************************************************************************
+ ***************************************************************************************************
  * @author  mario.kodba
  * @date    03.12.2020
- ******************************************************************************/
+ **************************************************************************************************/
 static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr) {
 
@@ -1074,6 +1089,6 @@ static void BSP_ECG_ADS1192_detectRldOff(BSP_ECG_ADS1192_device_S *inDevice,
 
 #endif // #if (DEBUG == true)
 
-/*******************************************************************************
+/***************************************************************************************************
  *                          END OF FILE
- ******************************************************************************/
+ **************************************************************************************************/

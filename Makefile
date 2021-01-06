@@ -23,6 +23,11 @@ SRC_FILES += \
   $(PROJ_DIR)/application/hal/hal_timer.c \
   $(PROJ_DIR)/application/hal/hal_clk.c \
   $(PROJ_DIR)/application/hal/hal_spi.c \
+  $(PROJ_DIR)/segger_rtt/RTT_Syscalls_GCC.c \
+  $(PROJ_DIR)/segger_rtt/SEGGER_RTT_printf.c \
+  $(PROJ_DIR)/segger_rtt/SEGGER_RTT.c \
+  $(PROJ_DIR)/segger_rtt/nrf_log_backend_serial.c \
+  $(PROJ_DIR)/segger_rtt/nrf_log_frontend.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error.c \
   $(PROJ_DIR)/SDK_components/libraries/util/app_error_weak.c \
   $(PROJ_DIR)/SDK_components/libraries/util/nrf_assert.c \
@@ -31,11 +36,6 @@ SRC_FILES += \
   $(PROJ_DIR)/SDK_components/nrf_drivers/gpiote/nrf_drv_gpiote.c \
   $(PROJ_DIR)/SDK_components/toolchain/gcc/gcc_startup_nrf51.S \
   $(PROJ_DIR)/SDK_components/toolchain/system_nrf51.c \
-  $(PROJ_DIR)/segger_rtt/RTT_Syscalls_GCC.c \
-  $(PROJ_DIR)/segger_rtt/SEGGER_RTT_printf.c \
-  $(PROJ_DIR)/segger_rtt/SEGGER_RTT.c \
-  $(PROJ_DIR)/segger_rtt/nrf_log_backend_serial.c \
-  $(PROJ_DIR)/segger_rtt/nrf_log_frontend.c \
   $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
   $(SDK_ROOT)/components/libraries/crc16/crc16.c \
   $(SDK_ROOT)/components/libraries/fds/fds.c \
@@ -56,7 +56,6 @@ INC_FOLDERS += \
   $(PROJ_DIR)/application/config \
   $(PROJ_DIR)/application/config/bsp \
   $(PROJ_DIR)/application/config/drivers \
-  $(PROJ_DIR)/application/config/nrf_drivers \
   $(PROJ_DIR)/SDK_components/libraries/util \
   $(PROJ_DIR)/SDK_components/device \
   $(PROJ_DIR)/SDK_components/nrf_drivers/hal \
