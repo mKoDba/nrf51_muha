@@ -65,7 +65,7 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 
     ERR_E err = ERR_NONE;
 
-    SEGGER_RTT_printf(0, "Initializing nRF51-MUHA...\n");
+    SEGGER_RTT_WriteString(0u, "Initializing nRF51-MUHA...\n");
 
     // initialize GPIOs
     NRF51_MUHA_initGpio(&err);
