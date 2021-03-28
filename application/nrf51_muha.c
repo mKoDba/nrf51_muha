@@ -29,6 +29,7 @@
 #include "drv_timer.h"
 #include "drv_spi.h"
 #include "nrf51_muha.h"
+#include "ble_muha.h"
 
 #include "nrf_gpio.h"
 #include "hal_clk.h"
@@ -73,6 +74,10 @@ void NRF51_MUHA_init(ERR_E *outErr) {
     if(err == ERR_NONE) {
         // initialize NRF peripheral drivers
         NRF51_MUHA_initDrivers(&err);
+    }
+
+    if(err == ERR_NONE) {
+        BLE_MUHA_init(&err);
     }
 
     if(err == ERR_NONE) {
@@ -154,14 +159,14 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
-    // initialize HFCLK needed for TIMER instance
-    HAL_CLK_hfclkStart();
-
-    // initialize TIMER1 instance
-    DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+//    // initialize HFCLK needed for TIMER instance
+//    HAL_CLK_hfclkStart();
+//
+//    // initialize TIMER1 instance
+//    DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
 
     // initialize SPI instance
-    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
+//    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
 
     if(outErr != NULL) {
         *outErr = drvInitErr;

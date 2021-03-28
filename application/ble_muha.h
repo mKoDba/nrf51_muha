@@ -13,39 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    nrf51_muha.h
+ * @file    ble_muha.h
  * @author  mario.kodba
- * @brief   Initialization and start functions for NRF51 MUHA board header file.
+ * @brief   Implementation of BLE functionality for MUHA board header file.
  **************************************************************************************************/
 
-#ifndef NRF51_MUHA_H_
-#define NRF51_MUHA_H_
+#ifndef BLE_MUHA_H_
+#define BLE_MUHA_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-
+#include "nrf51_muha.h"
 
 /***************************************************************************************************
  *                              DATA STRUCTURES
  **************************************************************************************************/
-//! MUHA board error enumeration
-typedef enum ERR_ENUM {
-    ERR_NONE                = 0u,       //!< No error.
-    ERR_DRV_SPI_INIT_FAIL,              //!< SPI driver initialization error.
-    ERR_DRV_TIMER_INIT_FAIL,            //!< TIMER driver initialization error.
-    ERR_GPIO_INIT_FAIL,                 //!< GPIO initialization error.
-    ERR_GAP_PARAMETERS_INIT_FAIL,       //!< BLE GAP parameters setting error.
-    ERR_ADVERTISING_INIT_FAIL           //!< BLE Advertising initialization error.
-} ERR_E;
 
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
-void NRF51_MUHA_init(ERR_E *error);
-void NRF51_MUHA_start();
+void BLE_MUHA_init(ERR_E *error);
 
-#endif // #ifndef NRF51_MUHA_H_
+#endif // #ifndef BLE_MUHA_H_
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/

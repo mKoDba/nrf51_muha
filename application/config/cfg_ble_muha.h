@@ -13,39 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    nrf51_muha.h
+ * @file    cfg_ble_muha.h
  * @author  mario.kodba
- * @brief   Initialization and start functions for NRF51 MUHA board header file.
+ * @brief   Configuration for BLE functionality header file.
  **************************************************************************************************/
 
-#ifndef NRF51_MUHA_H_
-#define NRF51_MUHA_H_
+#ifndef CFG_BLE_MUHA_H_
+#define CFG_BLE_MUHA_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
+ **************************************************************************************************/
+#include "nrf_sdm.h"
+#include "ble.h"
+
+/***************************************************************************************************
+ *                                  CONSTANTS
  **************************************************************************************************/
 
 
 /***************************************************************************************************
  *                              DATA STRUCTURES
  **************************************************************************************************/
-//! MUHA board error enumeration
-typedef enum ERR_ENUM {
-    ERR_NONE                = 0u,       //!< No error.
-    ERR_DRV_SPI_INIT_FAIL,              //!< SPI driver initialization error.
-    ERR_DRV_TIMER_INIT_FAIL,            //!< TIMER driver initialization error.
-    ERR_GPIO_INIT_FAIL,                 //!< GPIO initialization error.
-    ERR_GAP_PARAMETERS_INIT_FAIL,       //!< BLE GAP parameters setting error.
-    ERR_ADVERTISING_INIT_FAIL           //!< BLE Advertising initialization error.
-} ERR_E;
 
 /***************************************************************************************************
- *                         PUBLIC FUNCTION DECLARATIONS
+ *                              GLOBAL VARIABLES
  **************************************************************************************************/
-void NRF51_MUHA_init(ERR_E *error);
-void NRF51_MUHA_start();
+extern nrf_clock_lf_cfg_t bleLfClock;
+extern ble_gap_adv_params_t bleAdvertisingParams;
+extern ble_enable_params_t bleEnableParams;
+extern ble_gap_conn_params_t gapConnectionParams;
 
-#endif // #ifndef NRF51_MUHA_H_
+/***************************************************************************************************
+ *                        PUBLIC FUNCTION DECLARATIONS
+ **************************************************************************************************/
+
+#endif // #ifndef CFG_BLE_MUHA_H_ */
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/
