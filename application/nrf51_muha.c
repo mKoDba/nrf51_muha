@@ -106,6 +106,10 @@ void NRF51_MUHA_start(ERR_E *error) {
 
     BLE_MUHA_advertisingStart(&localErr);
 
+    while(true){
+        ;
+    }
+
     if(localErr == ERR_NONE) {
         BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
     }

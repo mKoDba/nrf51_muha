@@ -90,11 +90,6 @@ void BLE_MUHA_init(ERR_E *error) {
         BLE_MUHA_advertisingInit(&localErr);
     }
 
-    if(localErr == ERR_NONE) {
-        // start BLE execution
-        BLE_MUHA_advertisingStart(&localErr);
-    }
-
     if(error != NULL) {
         *error = localErr;
     }

@@ -352,8 +352,10 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
         const uint16_t inDataSize,
         int16_t *outData) {
 
-    /* iterate over array of bytes and transfrom it into proper 16-bit value (digital code)
-     * optionally, transform it into voltage amplitude */
+    /*
+     * Iterate over array of bytes and transform it into proper 16-bit value (digital code)
+     * optionally, transform it into voltage amplitude
+     */
     for(uint16_t i = 0, j = 0; i < inDataSize - 1; i += 2, j++) {
         int16_t tmp = *(inData + i + 1) | (*(inData + i) << BSP_ECG_ADS1192_BYTE_SHIFT);
         SEGGER_RTT_Write(0, (uint16_t *) &tmp, 2u);
