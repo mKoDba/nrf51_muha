@@ -31,19 +31,24 @@
  **************************************************************************************************/
 //! MUHA board error enumeration
 typedef enum ERR_ENUM {
-    ERR_NONE                = 0u,       //!< No error.
-    ERR_DRV_SPI_INIT_FAIL,              //!< SPI driver initialization error.
-    ERR_DRV_TIMER_INIT_FAIL,            //!< TIMER driver initialization error.
-    ERR_GPIO_INIT_FAIL,                 //!< GPIO initialization error.
-    ERR_GAP_PARAMETERS_INIT_FAIL,       //!< BLE GAP parameters setting error.
-    ERR_ADVERTISING_INIT_FAIL           //!< BLE Advertising initialization error.
+    ERR_NONE                            = 0u,       //!< No error.
+    ERR_DRV_SPI_INIT_FAIL,                          //!< SPI driver initialization error.
+    ERR_DRV_TIMER_INIT_FAIL,                        //!< TIMER driver initialization error.
+    ERR_GPIO_INIT_FAIL,                             //!< GPIO initialization error.
+    ERR_BLE_STACK_INIT_FAIL,                        //!< BLE stack/softdevice initialization error.
+    ERR_BLE_GAP_INIT_FAIL,                          //!< BLE GAP parameters initialization error.
+    ERR_BLE_ADVERTISING_DATA_INIT_FAIL,             //!< BLE Advertising data initialization error.
+    ERR_BLE_ADVERTISING_START_FAIL,                 //!< BLE Advertising start error.
+    ERR_ECG_ADS1192_START_FAIL,                     //!< ADS1192 device start error.
+
+    ERR_COUNT
 } ERR_E;
 
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
 void NRF51_MUHA_init(ERR_E *error);
-void NRF51_MUHA_start();
+void NRF51_MUHA_start(ERR_E *error);
 
 #endif // #ifndef NRF51_MUHA_H_
 /***************************************************************************************************

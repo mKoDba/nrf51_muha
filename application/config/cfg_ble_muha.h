@@ -30,7 +30,8 @@
 /***************************************************************************************************
  *                                  CONSTANTS
  **************************************************************************************************/
-
+#define DEVICE_NAME                     "MK_MUHA"       //!< MUHA device name used for BLE
+#define BLE_MUHA_TX_POWER_LVL           (4)             //!< TX power level in dB
 
 /***************************************************************************************************
  *                              DATA STRUCTURES
@@ -39,7 +40,8 @@
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
  **************************************************************************************************/
-extern nrf_clock_lf_cfg_t bleLfClock;
+extern nrf_clock_lf_cfg_t bleLfClockXTAL;
+extern nrf_clock_lf_cfg_t bleLfClockRC;
 extern ble_gap_adv_params_t bleAdvertisingParams;
 extern ble_enable_params_t bleEnableParams;
 extern ble_gap_conn_params_t gapConnectionParams;

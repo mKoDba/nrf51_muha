@@ -42,6 +42,7 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
+#define USE_HFCLK false
 
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
@@ -93,20 +94,33 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 /***********************************************************************************************//**
  * @brief Function starts main application.
  ***************************************************************************************************
- * @param [in]  - None.
+ * @param [out]  *err - error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
  **************************************************************************************************/
-void NRF51_MUHA_start() {
+void NRF51_MUHA_start(ERR_E *error) {
 
+    ERR_E localErr = ERR_NONE;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
 
-    BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
+    BLE_MUHA_advertisingStart(&localErr);
+
+    if(localErr == ERR_NONE) {
+        BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
+    }
+
+    if(ecgErr != BSP_ECG_ADS1192_err_NONE) {
+        localErr = ERR_ECG_ADS1192_START_FAIL;
+    }
 
     // TODO: [mario.kodba 29.11.2020.] Add RTOS start here and remove loop?
     while(true){
         ;
+    }
+
+    if(error != NULL) {
+        *error = localErr;
     }
 }
 
@@ -140,8 +154,10 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
     nrf_gpio_cfg_output(LD1);
     nrf_gpio_cfg_output(ECG_RST);
 
-    if(gpioErr != NRF_SUCCESS && outErr != NULL) {
-        *outErr = ERR_GPIO_INIT_FAIL;
+    if(outErr != NULL) {
+        if(gpioErr != NRF_SUCCESS) {
+            *outErr = ERR_GPIO_INIT_FAIL;
+        }
     }
 }
 
@@ -156,17 +172,24 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
     ERR_E drvInitErr = ERR_NONE;
+#if (USE_HFCLK == true)
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+#endif // #if (USE_HFCLK == true)
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
-//    // initialize HFCLK needed for TIMER instance
-//    HAL_CLK_hfclkStart();
-//
-//    // initialize TIMER1 instance
-//    DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+    // initialize LFCLK needed for BLE
+    HAL_CLK_lfclkStart();
+
+#if (USE_HFCLK == true)
+    // initialize HFCLK needed for TIMER instances
+    HAL_CLK_hfclkStart();
+
+    // initialize TIMER1 instance
+    DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+#endif // #if (USE_HFCLK == true)
 
     // initialize SPI instance
-//    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
+    DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
 
     if(outErr != NULL) {
         *outErr = drvInitErr;

@@ -34,6 +34,7 @@
  *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
 void BLE_MUHA_init(ERR_E *error);
+void BLE_MUHA_advertisingStart(ERR_E *err);
 
 #endif // #ifndef BLE_MUHA_H_
 /***************************************************************************************************
