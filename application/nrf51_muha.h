@@ -37,11 +37,13 @@ typedef enum ERR_ENUM {
     ERR_GPIO_INIT_FAIL,                             //!< GPIO initialization error.
     ERR_BLE_STACK_INIT_FAIL,                        //!< BLE stack/softdevice initialization error.
     ERR_BLE_GAP_INIT_FAIL,                          //!< BLE GAP parameters initialization error.
+    ERR_BLE_CONNECTIONS_INIT_FAIL,                  //!< BLE Connections parameters initialization error.
     ERR_BLE_ADVERTISING_DATA_INIT_FAIL,             //!< BLE Advertising data initialization error.
     ERR_BLE_ADVERTISING_START_FAIL,                 //!< BLE Advertising start error.
     ERR_ECG_ADS1192_START_FAIL,                     //!< ADS1192 device start error.
+    ERR_HAL_WATCHDOG_INIT_FAIL,                     //!< WATCHDOG module initialization error.
 
-    ERR_COUNT
+    ERR_COUNT                                       //!< Total number of errors.
 } ERR_E;
 
 /***************************************************************************************************

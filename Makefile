@@ -19,6 +19,7 @@ SRC_FILES += \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_spi.c \
+  $(PROJ_DIR)/application/config/hal/cfg_hal_watchdog.c \
   $(PROJ_DIR)/application/config/cfg_ble_muha.c \
   $(PROJ_DIR)/application/drivers/drv_common.c \
   $(PROJ_DIR)/application/drivers/drv_timer.c \
@@ -26,6 +27,7 @@ SRC_FILES += \
   $(PROJ_DIR)/application/hal/hal_timer.c \
   $(PROJ_DIR)/application/hal/hal_clk.c \
   $(PROJ_DIR)/application/hal/hal_spi.c \
+  $(PROJ_DIR)/application/hal/hal_watchdog.c \
   $(SDK_DIR)/external/segger_rtt/RTT_Syscalls_GCC.c \
   $(SDK_DIR)/external/segger_rtt/SEGGER_RTT_printf.c \
   $(SDK_DIR)/external/segger_rtt/SEGGER_RTT.c \
@@ -52,6 +54,7 @@ SRC_FILES += \
   $(SDK_DIR)/components/ble/common/ble_conn_params.c \
   $(SDK_DIR)/components/ble/common/ble_srv_common.c \
   $(SDK_DIR)/components/ble/ble_services/ble_dis/ble_dis.c \
+  $(SDK_DIR)/components/ble/ble_services/ble_bas/ble_bas.c \
   
 # Include folders common to all targets
 INC_FOLDERS += \
@@ -62,6 +65,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/application/config \
   $(PROJ_DIR)/application/config/bsp \
   $(PROJ_DIR)/application/config/drivers \
+  $(PROJ_DIR)/application/config/hal \
   $(SDK_DIR)/components/libraries/util \
   $(SDK_DIR)/components/device \
   $(SDK_DIR)/components/drivers_nrf/hal \

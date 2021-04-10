@@ -23,7 +23,6 @@
  *                              INCLUDE FILES
  **************************************************************************************************/
 #include <stddef.h>
-#include <string.h>
 
 #include "SEGGER_RTT.h"
 #include "drv_timer.h"
@@ -138,7 +137,6 @@ static const uint8_t ecgADS1192RegAddr[BSP_ECG_ADS1192_reg_COUNT] = {
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
 static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
-        const uint16_t inDataSize,
         int16_t *outData);
 static void BSP_ECG_ADS1192_sendSpiCommand(BSP_ECG_ADS1192_device_S *inDevice,
         const uint8_t inSpiCmd,
@@ -349,18 +347,12 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
  * @date    05.12.2020
  **************************************************************************************************/
 static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inData,
-        const uint16_t inDataSize,
         int16_t *outData) {
 
-    /*
-     * Iterate over array of bytes and transform it into proper 16-bit value (digital code)
-     * optionally, transform it into voltage amplitude
-     */
-    for(uint16_t i = 0, j = 0; i < inDataSize - 1; i += 2, j++) {
-        int16_t tmp = *(inData + i + 1) | (*(inData + i) << BSP_ECG_ADS1192_BYTE_SHIFT);
-        SEGGER_RTT_Write(0, (uint16_t *) &tmp, 2u);
-        memcpy((outData + j), &tmp, sizeof(int16_t));
-    }
+    outData[0] = inData[1] | (inData[0] << BSP_ECG_ADS1192_BYTE_SHIFT);
+    outData[1] = inData[2] | (inData[1] << BSP_ECG_ADS1192_BYTE_SHIFT);
+    outData[2] = inData[3] | (inData[2] << BSP_ECG_ADS1192_BYTE_SHIFT);
+    SEGGER_RTT_printf(0, ",%d,%d,%d\n", outData[0], outData[1], outData[2]);
 }
 
 /***********************************************************************************************//**
@@ -706,9 +698,7 @@ void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_pol
     // get data bytes from ADS1192
     DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
     // convert data to correct format
-    BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0],
-            BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME,
-            &outData[0]);
+    BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
 
     // TODO: [mario.kodba 02.01.2021.] Implement sending data over bluetooth
 }

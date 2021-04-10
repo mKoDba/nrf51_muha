@@ -40,6 +40,7 @@
 #include "ble_muha.h"
 #include "cfg_ble_muha.h"
 #include "nrf51_muha.h"
+#include "hal_watchdog.h"
 
 #include "SEGGER_RTT.h"
 #include "ble_advdata.h"
@@ -48,17 +49,24 @@
 #include "ble_conn_params.h"
 #include "ble_advertising.h"
 
+#include "ble_dis.h"
+#include "ble_bas.h"
+
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
-#define BLE_MUHA_CENTRAL_LINK_COUNT              (0)    //!< Number of central links used by the application. When changing this number remember to adjust the RAM settings*/
-#define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    //!< Number of peripheral links used by the application. When changing this number remember to adjust the RAM settings*/
+#define BLE_MUHA_CENTRAL_LINK_COUNT              (0)    /*!< Number of central links used by the application.
+                                                             When changing this number remember to adjust the RAM settings */
+#define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    /*!< Number of peripheral links used by the application.
+                                                             When changing this number remember to adjust the RAM settings */
 
+static ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
 static void BLE_MUHA_bleStackInit(ERR_E *err);
 static void BLE_MUHA_gapInit(ERR_E *err);
+static void BLE_MUHA_servicesInit(ERR_E *err);
 static void BLE_MUHA_advertisingInit(ERR_E *err);
 
 /***************************************************************************************************
@@ -83,6 +91,11 @@ void BLE_MUHA_init(ERR_E *error) {
     if(localErr == ERR_NONE) {
         // GAP parameters initialization
         BLE_MUHA_gapInit(&localErr);
+    }
+
+    if(localErr == ERR_NONE) {
+        // services initialization
+        BLE_MUHA_servicesInit(&localErr);
     }
 
     if(localErr == ERR_NONE) {
@@ -117,6 +130,18 @@ void BLE_MUHA_advertisingStart(ERR_E *err) {
     }
 }
 
+/***********************************************************************************************//**
+ * @brief Callback function for BLE event handling.
+ ***************************************************************************************************
+ * @param [in] *bleEvent - pointer to BLE event received from SoftDevice.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    10.04.2021.
+ **************************************************************************************************/
+void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent) {
+
+}
+
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DEFINITIONS
  **************************************************************************************************/
@@ -143,6 +168,11 @@ static void BLE_MUHA_bleStackInit(ERR_E *err) {
     // enable BLE stack
     if(nrfErrCode == NRF_SUCCESS) {
         nrfErrCode = softdevice_enable(&ble_enable_params);
+    }
+
+    // setup callback on BLE event
+    if(nrfErrCode == NRF_SUCCESS) {
+        nrfErrCode = softdevice_ble_evt_handler_set(BLE_MUHA_bleEventCallback);
     }
 
     if(err != NULL) {
@@ -186,6 +216,56 @@ static void BLE_MUHA_gapInit(ERR_E *err) {
         // sets preferred connection parameters
         nrfErrCode = sd_ble_gap_ppcp_set(&gapConnectionParams);
     }
+
+    if(err != NULL) {
+        if(nrfErrCode != NRF_SUCCESS) {
+            *err = ERR_BLE_GAP_INIT_FAIL;
+        }
+    }
+}
+
+/***********************************************************************************************//**
+ * @brief Function sets up BLE services used in application.
+ * @details Sets Device Information Service (DIS).
+ ***************************************************************************************************
+ * @param [out] *err - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    10.04.2021.
+ **************************************************************************************************/
+static void BLE_MUHA_servicesInit(ERR_E *err) {
+
+    uint32_t nrfErrCode = NRF_SUCCESS;
+
+    ble_bas_init_t bas_init;
+    ble_dis_init_t dis_init;
+
+    // Initialize Battery Service.
+    memset(&bas_init, 0, sizeof(bas_init));
+
+    // Here the sec level for the Battery Service can be changed/increased.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.cccd_write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&bas_init.battery_level_char_attr_md.write_perm);
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_report_read_perm);
+
+    bas_init.evt_handler          = NULL;
+    bas_init.support_notification = true;
+    bas_init.p_report_ref         = NULL;
+    bas_init.initial_batt_level   = 100;
+
+    nrfErrCode = ble_bas_init(&m_bas, &bas_init);
+
+    // Initialize Device Information Service.
+    memset(&dis_init, 0, sizeof(dis_init));
+
+    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)"Nordic");
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&dis_init.dis_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&dis_init.dis_attr_md.write_perm);
+
+    nrfErrCode = ble_dis_init(&dis_init);
 
     if(err != NULL) {
         if(nrfErrCode != NRF_SUCCESS) {
