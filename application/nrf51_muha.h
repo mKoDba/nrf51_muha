@@ -32,6 +32,7 @@
 //! MUHA board error enumeration
 typedef enum ERR_ENUM {
     ERR_NONE                            = 0u,       //!< No error.
+    ERR_NULL_PARAMETER,                             //!< Null parameter error.
     ERR_DRV_SPI_INIT_FAIL,                          //!< SPI driver initialization error.
     ERR_DRV_TIMER_INIT_FAIL,                        //!< TIMER driver initialization error.
     ERR_GPIO_INIT_FAIL,                             //!< GPIO initialization error.
@@ -40,6 +41,8 @@ typedef enum ERR_ENUM {
     ERR_BLE_CONNECTIONS_INIT_FAIL,                  //!< BLE Connections parameters initialization error.
     ERR_BLE_ADVERTISING_DATA_INIT_FAIL,             //!< BLE Advertising data initialization error.
     ERR_BLE_ADVERTISING_START_FAIL,                 //!< BLE Advertising start error.
+    ERR_BLE_CUSTOM_SERVICE_INIT_FAIL,               //!< BLE Custom service initialization error.
+    ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL,            //!< BLE Custom service runtime error.
     ERR_ECG_ADS1192_START_FAIL,                     //!< ADS1192 device start error.
     ERR_HAL_WATCHDOG_INIT_FAIL,                     //!< WATCHDOG module initialization error.
 

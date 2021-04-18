@@ -31,7 +31,12 @@
 #include "cfg_drv_timer.h"
 #include "cfg_drv_spi.h"
 #include "cfg_nrf51_muha_pinout.h"
+#include "cfg_bsp_ecg_ADS1192.h"
 #include "bsp_ecg_ADS1192.h"
+
+#include "ble_ecgs.h"
+#include "ble_bas.h"
+#include "ble_gatts.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -195,6 +200,7 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
 
     if((inDevice != NULL) && (inConfig != NULL)) {
         inDevice->config = inConfig;
+        inDevice->sampleIndex = 0u;
         inDevice->isInitialized = false;
 
         // internal oscillator start-up time
@@ -352,6 +358,7 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
     outData[0] = inData[1] | (inData[0] << BSP_ECG_ADS1192_BYTE_SHIFT);
     outData[1] = inData[2] | (inData[1] << BSP_ECG_ADS1192_BYTE_SHIFT);
     outData[2] = inData[3] | (inData[2] << BSP_ECG_ADS1192_BYTE_SHIFT);
+
     SEGGER_RTT_printf(0, ",%d,%d,%d\n", outData[0], outData[1], outData[2]);
 }
 
@@ -700,7 +707,14 @@ void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_pol
     // convert data to correct format
     BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
 
-    // TODO: [mario.kodba 02.01.2021.] Implement sending data over bluetooth
+    ecgDevice.adcVal[ecgDevice.sampleIndex] = outData[0];
+    ecgDevice.sampleIndex++;
+    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
+        // send data over BLE
+    }
+
+    BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &outData[2], NULL);
+    ecgDevice.sampleIndex = ecgDevice.sampleIndex % BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE;
 }
 
 #if (DEBUG == true)

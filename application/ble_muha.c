@@ -1,9 +1,3 @@
-#include "ble_muha.h"
-#include "cfg_ble_muha.h"
-#include "nrf51_muha.h"
-#include "SEGGER_RTT.h"
-
-
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                 /**< Include or not the service_changed characteristic. if not enabled, the server's database cannot be changed for the lifetime of the device*/
 
@@ -41,7 +35,6 @@
 #include "cfg_ble_muha.h"
 #include "nrf51_muha.h"
 #include "hal_watchdog.h"
-
 #include "SEGGER_RTT.h"
 #include "ble_advdata.h"
 #include "nordic_common.h"
@@ -51,6 +44,7 @@
 
 #include "ble_dis.h"
 #include "ble_bas.h"
+#include "ble_ecgs.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -59,8 +53,10 @@
                                                              When changing this number remember to adjust the RAM settings */
 #define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    /*!< Number of peripheral links used by the application.
                                                              When changing this number remember to adjust the RAM settings */
+BLE_ECGS_custom_S m_ecgs;
 
-static ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
+ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
+
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
@@ -68,7 +64,7 @@ static void BLE_MUHA_bleStackInit(ERR_E *err);
 static void BLE_MUHA_gapInit(ERR_E *err);
 static void BLE_MUHA_servicesInit(ERR_E *err);
 static void BLE_MUHA_advertisingInit(ERR_E *err);
-
+static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *evt);
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
  **************************************************************************************************/
@@ -140,6 +136,14 @@ void BLE_MUHA_advertisingStart(ERR_E *err) {
  **************************************************************************************************/
 void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent) {
 
+    ble_bas_on_ble_evt(&m_bas, bleEvent);
+
+    BLE_ECGS_onBleEvt(bleEvent, &m_ecgs);
+
+    // in case of disconnect, start advertising again
+    if(bleEvent->header.evt_id == BLE_GAP_EVT_DISCONNECTED) {
+        BLE_MUHA_advertisingStart(NULL);
+    }
 }
 
 /***************************************************************************************************
@@ -235,15 +239,15 @@ static void BLE_MUHA_gapInit(ERR_E *err) {
  **************************************************************************************************/
 static void BLE_MUHA_servicesInit(ERR_E *err) {
 
+    ERR_E localErr = ERR_NONE;
     uint32_t nrfErrCode = NRF_SUCCESS;
-
     ble_bas_init_t bas_init;
-    ble_dis_init_t dis_init;
+    BLE_ECGS_customInit_S ecgs_init;
 
-    // Initialize Battery Service.
+    // initialize Battery Service.
     memset(&bas_init, 0, sizeof(bas_init));
 
-    // Here the sec level for the Battery Service can be changed/increased.
+    // here the sec level for the Battery Service can be changed/increased.
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.cccd_write_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&bas_init.battery_level_char_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&bas_init.battery_level_char_attr_md.write_perm);
@@ -257,20 +261,23 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
 
     nrfErrCode = ble_bas_init(&m_bas, &bas_init);
 
-    // Initialize Device Information Service.
-    memset(&dis_init, 0, sizeof(dis_init));
+    if(nrfErrCode != NRF_SUCCESS) {
+        localErr = ERR_BLE_GAP_INIT_FAIL;
+    }
 
-    ble_srv_ascii_to_utf8(&dis_init.manufact_name_str, (char *)"Nordic");
+     // initialize custom ECG service init structure to zero.
+    memset(&ecgs_init, 0, sizeof(ecgs_init));
 
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&dis_init.dis_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&dis_init.dis_attr_md.write_perm);
+    ecgs_init.evt_handler = BLE_MUHA_onEcgsEvent;
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.write_perm);
 
-    nrfErrCode = ble_dis_init(&dis_init);
+    if(localErr == ERR_NONE) {
+        BLE_ECGS_init(&m_ecgs, &ecgs_init, &localErr);
+    }
 
     if(err != NULL) {
-        if(nrfErrCode != NRF_SUCCESS) {
-            *err = ERR_BLE_GAP_INIT_FAIL;
-        }
+        *err = localErr;
     }
 }
 
@@ -317,6 +324,36 @@ static void BLE_MUHA_advertisingInit(ERR_E *err) {
         if(nrfErrCode != NRF_SUCCESS) {
             *err = ERR_BLE_ADVERTISING_DATA_INIT_FAIL;
         }
+    }
+}
+
+/***********************************************************************************************//**
+ * @brief Called on ECG custom service event.
+ ***************************************************************************************************
+ * @param [in]  customService   - Pointer to custom ECG service structure.
+ * @param [in]  evt             - Pointer to ECG service event type.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    16.04.2021.
+ **************************************************************************************************/
+static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *evt) {
+
+    switch(evt->evt_type) {
+        case BLE_CUS_EVT_NOTIFICATION_ENABLED:
+            break;
+
+        case BLE_CUS_EVT_NOTIFICATION_DISABLED:
+            break;
+
+        case BLE_ECGS_EVT_CONNECTED:
+            break;
+
+        case BLE_ECGS_EVT_DISCONNECTED:
+              break;
+
+        default:
+              // no implementation needed.
+              break;
     }
 }
 

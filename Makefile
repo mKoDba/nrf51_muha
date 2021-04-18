@@ -15,6 +15,7 @@ SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/application/nrf51_muha.c \
   $(PROJ_DIR)/application/ble_muha.c \
+  $(PROJ_DIR)/application/ble_ecgs.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
@@ -53,9 +54,8 @@ SRC_FILES += \
   $(SDK_DIR)/components/ble/common/ble_advdata.c \
   $(SDK_DIR)/components/ble/common/ble_conn_params.c \
   $(SDK_DIR)/components/ble/common/ble_srv_common.c \
-  $(SDK_DIR)/components/ble/ble_services/ble_dis/ble_dis.c \
   $(SDK_DIR)/components/ble/ble_services/ble_bas/ble_bas.c \
-  
+    
 # Include folders common to all targets
 INC_FOLDERS += \
   $(PROJ_DIR)/application \

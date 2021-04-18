@@ -105,6 +105,7 @@ void NRF51_MUHA_start(ERR_E *error) {
 
     ERR_E localErr = ERR_NONE;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
 
 //    while(true){
 //        ;
@@ -113,6 +114,7 @@ void NRF51_MUHA_start(ERR_E *error) {
 //    if(localErr == ERR_NONE) {
 //        HAL_WATCHDOG_start();
 //    }
+
 
     if(localErr == ERR_NONE) {
         BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
@@ -135,6 +137,7 @@ void NRF51_MUHA_start(ERR_E *error) {
         *error = localErr;
     }
 }
+
 
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DEFINITIONS
@@ -198,6 +201,7 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
     // initialize TIMER1 instance
     DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+
 #endif // #if (USE_HFCLK == true)
 
     // initialize watchdog timer

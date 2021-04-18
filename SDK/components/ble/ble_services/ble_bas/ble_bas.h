@@ -91,6 +91,9 @@ struct ble_bas_s
     bool                          is_notification_supported;      /**< TRUE if notification of Battery Level is supported. */
 };
 
+
+extern ble_bas_t m_bas;
+
 /**@brief Function for initializing the Battery Service.
  *
  * @param[out]  p_bas       Battery Service structure. This structure will have to be supplied by
