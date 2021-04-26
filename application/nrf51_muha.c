@@ -24,23 +24,27 @@
  **************************************************************************************************/
 #include <stddef.h>
 
-#include "SEGGER_RTT.h"
 #include "nrf_drv_gpiote.h"
 #include "drv_timer.h"
 #include "drv_spi.h"
 #include "nrf51_muha.h"
+#include "ble_muha.h"
 
 #include "nrf_gpio.h"
 #include "hal_clk.h"
+#include "hal_watchdog.h"
 
-#include "cfg_drv_timer.h"
 #include "cfg_drv_spi.h"
+#include "cfg_drv_timer.h"
 #include "cfg_bsp_ecg_ADS1192.h"
 #include "cfg_nrf51_muha_pinout.h"
+#include "cfg_hal_watchdog.h"
+#include "SEGGER_RTT.h"
 
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
+#define USE_HFCLK true
 
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
@@ -65,7 +69,7 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 
     ERR_E err = ERR_NONE;
 
-    SEGGER_RTT_printf(0, "Initializing nRF51-MUHA...\n");
+    SEGGER_RTT_printf(0, "Initializing nRF51...\n");
 
     // initialize GPIOs
     NRF51_MUHA_initGpio(&err);
@@ -73,6 +77,10 @@ void NRF51_MUHA_init(ERR_E *outErr) {
     if(err == ERR_NONE) {
         // initialize NRF peripheral drivers
         NRF51_MUHA_initDrivers(&err);
+    }
+
+    if(err == ERR_NONE) {
+        BLE_MUHA_init(&err);
     }
 
     if(err == ERR_NONE) {
@@ -88,22 +96,48 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 /***********************************************************************************************//**
  * @brief Function starts main application.
  ***************************************************************************************************
- * @param [in]  - None.
+ * @param [out]  *err - error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
  **************************************************************************************************/
-void NRF51_MUHA_start() {
+void NRF51_MUHA_start(ERR_E *error) {
 
+    ERR_E localErr = ERR_NONE;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
 
-    BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
+//    while(true){
+//        ;
+//    }
+//
+//    if(localErr == ERR_NONE) {
+//        HAL_WATCHDOG_start();
+//    }
+
+
+    if(localErr == ERR_NONE) {
+        BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
+    }
+
+    if(ecgErr != BSP_ECG_ADS1192_err_NONE) {
+        localErr = ERR_ECG_ADS1192_START_FAIL;
+    }
+
+    if(localErr == ERR_NONE) {
+        BLE_MUHA_advertisingStart(&localErr);
+    }
 
     // TODO: [mario.kodba 29.11.2020.] Add RTOS start here and remove loop?
     while(true){
         ;
     }
+
+    if(error != NULL) {
+        *error = localErr;
+    }
 }
+
 
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DEFINITIONS
@@ -135,8 +169,10 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
     nrf_gpio_cfg_output(LD1);
     nrf_gpio_cfg_output(ECG_RST);
 
-    if(gpioErr != NRF_SUCCESS && outErr != NULL) {
-        *outErr = ERR_GPIO_INIT_FAIL;
+    if(outErr != NULL) {
+        if(gpioErr != NRF_SUCCESS) {
+            *outErr = ERR_GPIO_INIT_FAIL;
+        }
     }
 }
 
@@ -151,14 +187,25 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
     ERR_E drvInitErr = ERR_NONE;
+#if (USE_HFCLK == true)
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+#endif // #if (USE_HFCLK == true)
     DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
 
-    // initialize HFCLK needed for TIMER instance
+    // initialize LFCLK needed for BLE, WDT
+    HAL_CLK_lfclkStart();
+
+#if (USE_HFCLK == true)
+    // initialize HFCLK needed for TIMER instances
     HAL_CLK_hfclkStart();
 
     // initialize TIMER1 instance
     DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+
+#endif // #if (USE_HFCLK == true)
+
+    // initialize watchdog timer
+    HAL_WATCHDOG_init(&configWatchdog, NULL, &drvInitErr);
 
     // initialize SPI instance
     DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);

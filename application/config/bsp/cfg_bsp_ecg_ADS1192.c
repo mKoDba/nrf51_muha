@@ -39,7 +39,7 @@ BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
         .spiInstance = &instanceSpi0,
         .spiConfig = &configSpi0,
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_500_SPS,
+        .samplingRate = BSP_ECG_ADS1192_convRate_125_SPS,
         .pgaSetting = BSP_ECG_ADS1192_pga_6X
 };
 
