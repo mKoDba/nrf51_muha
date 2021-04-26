@@ -32,10 +32,20 @@
  *                              GLOBAL VARIABLES
  **************************************************************************************************/
 DRV_TIMER_instance_S instanceTimer1;
+DRV_TIMER_instance_S instanceTimer2;
 
 DRV_TIMER_config_S configTimer1 = {
         .timerReg = NRF_TIMER1,
         .id = DRV_TIMER_id_1,
+        .frequency = DRV_TIMER_freq_31250Hz,
+        .mode = DRV_TIMER_mode_NORMAL,
+        .bitWidth = DRV_TIMER_bitWidth_16,
+        .irqPriority = 3u
+};
+
+DRV_TIMER_config_S configTimer2 = {
+        .timerReg = NRF_TIMER2,
+        .id = DRV_TIMER_id_2,
         .frequency = DRV_TIMER_freq_4MHz,
         .mode = DRV_TIMER_mode_NORMAL,
         .bitWidth = DRV_TIMER_bitWidth_16,

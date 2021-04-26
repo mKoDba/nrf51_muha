@@ -13,36 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    cfg_bsp_ecg_ADS1192.c
+ * @file    cfg_hal_watchdog.h
  * @author  mario.kodba
- * @brief   Configuration for ECG ADS1192 device source file.
+ * @brief   Configuration for WATCHDOG peripheral header file.
  **************************************************************************************************/
 
+#ifndef CFG_HAL_WATCHDOG_H_
+#define CFG_HAL_WATCHDOG_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
+#include "hal_watchdog.h"
 
 /***************************************************************************************************
- *                              DEFINES
+ *                              ENUMERATIONS
+ **************************************************************************************************/
+
+/***************************************************************************************************
+ *                              DATA STRUCTURES
  **************************************************************************************************/
 
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
  **************************************************************************************************/
-//! ADS1192 device assignment structure
-BSP_ECG_ADS1192_device_S ecgDevice;
-//! ADS1192 configuration structure
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+extern HAL_WATCHDOG_config_S configWatchdog;
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_125_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
+/***************************************************************************************************
+ *                         PUBLIC FUNCTION DECLARATIONS
+ **************************************************************************************************/
 
+#endif // #ifndef CFG_HAL_WATCHDOG_H_
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/

@@ -69,7 +69,7 @@ int main(void) {
     NRF51_MUHA_init(&error);
 
     if(error == ERR_NONE) {
-        NRF51_MUHA_start();
+        NRF51_MUHA_start(&error);
     }
 
     while(1) {

@@ -14,16 +14,21 @@ $(OUTPUT_DIRECTORY)/nrf51422_xxac.out: \
 SRC_FILES += \
   $(PROJ_DIR)/main.c \
   $(PROJ_DIR)/application/nrf51_muha.c \
+  $(PROJ_DIR)/application/ble_muha.c \
+  $(PROJ_DIR)/application/ble_ecgs.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_spi.c \
+  $(PROJ_DIR)/application/config/hal/cfg_hal_watchdog.c \
+  $(PROJ_DIR)/application/config/cfg_ble_muha.c \
   $(PROJ_DIR)/application/drivers/drv_common.c \
   $(PROJ_DIR)/application/drivers/drv_timer.c \
   $(PROJ_DIR)/application/drivers/drv_spi.c \
   $(PROJ_DIR)/application/hal/hal_timer.c \
   $(PROJ_DIR)/application/hal/hal_clk.c \
   $(PROJ_DIR)/application/hal/hal_spi.c \
+  $(PROJ_DIR)/application/hal/hal_watchdog.c \
   $(SDK_DIR)/external/segger_rtt/RTT_Syscalls_GCC.c \
   $(SDK_DIR)/external/segger_rtt/SEGGER_RTT_printf.c \
   $(SDK_DIR)/external/segger_rtt/SEGGER_RTT.c \
@@ -42,8 +47,15 @@ SRC_FILES += \
   $(SDK_DIR)/components/libraries/util/app_util_platform.c \
   $(SDK_DIR)/components/libraries/hardfault/hardfault_implementation.c \
   $(SDK_DIR)/components/libraries/util/sdk_mapped_flags.c \
+  $(SDK_DIR)/components/libraries/fstorage/fstorage.c \
+  $(SDK_DIR)/components/libraries/timer/app_timer.c \
   $(SDK_DIR)/components/drivers_nrf/clock/nrf_drv_clock.c \
-
+  $(SDK_DIR)/components/ble/ble_advertising/ble_advertising.c \
+  $(SDK_DIR)/components/ble/common/ble_advdata.c \
+  $(SDK_DIR)/components/ble/common/ble_conn_params.c \
+  $(SDK_DIR)/components/ble/common/ble_srv_common.c \
+  $(SDK_DIR)/components/ble/ble_services/ble_bas/ble_bas.c \
+    
 # Include folders common to all targets
 INC_FOLDERS += \
   $(PROJ_DIR)/application \
@@ -53,6 +65,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/application/config \
   $(PROJ_DIR)/application/config/bsp \
   $(PROJ_DIR)/application/config/drivers \
+  $(PROJ_DIR)/application/config/hal \
   $(SDK_DIR)/components/libraries/util \
   $(SDK_DIR)/components/device \
   $(SDK_DIR)/components/drivers_nrf/hal \
@@ -124,6 +137,7 @@ INC_FOLDERS += \
   $(SDK_DIR)/components/ble/ble_racp \
   $(SDK_DIR)/components/toolchain/gcc \
   $(SDK_DIR)/components/libraries/twi \
+  $(SDK_DIR)/components/libraries/fstorage \
   $(SDK_DIR)/components/drivers_nrf/clock \
   $(SDK_DIR)/components/ble/ble_services/ble_rscs \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler \

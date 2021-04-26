@@ -40,6 +40,9 @@
 extern DRV_TIMER_config_S configTimer1;         //!< Configuration structure of TIMER 1 instance
 extern DRV_TIMER_instance_S instanceTimer1;     //!< Instance structure of TIMER 1
 
+extern DRV_TIMER_config_S configTimer2;         //!< Configuration structure of TIMER 2 instance
+extern DRV_TIMER_instance_S instanceTimer2;     //!< Instance structure of TIMER 2
+
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/

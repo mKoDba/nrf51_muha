@@ -33,7 +33,8 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
-#define DEBUG false                             //!< DEBUG enable macro
+#define DEBUG false                                     //!< DEBUG enable macro
+#define BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE   (100u)  //!< Number of ADC samples to be stored to buffer
 
 /***************************************************************************************************
  *                              ENUMERATIONS
@@ -154,6 +155,8 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
+    int16_t adcVal[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
+    uint16_t sampleIndex;                       //!< Current index of sample
 #if (DEBUG == true)
     int16_t temperature;                        //!< Temperature of device
     float digitalVddSupply;                     //!< Digital VDD supply

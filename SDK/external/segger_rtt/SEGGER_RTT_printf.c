@@ -42,7 +42,6 @@ Purpose : Replacement for printf to write formatted data via RTT
 ----------------------------------------------------------------------
 */
 
-#if defined(NRF_LOG_USES_RTT) && NRF_LOG_USES_RTT == 1
 
 #include "SEGGER_RTT.h"
 #include "SEGGER_RTT_Conf.h"
@@ -492,8 +491,5 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...) {
   va_start(ParamList, sFormat);
   return SEGGER_RTT_vprintf(BufferIndex, sFormat, &ParamList);
 }
-
-
-#endif /* NRF_LOG_USES_RTT == 1 */
 
 /*************************** End of file ****************************/

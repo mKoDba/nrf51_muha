@@ -43,7 +43,8 @@
  **************************************************************************************************/
 void HAL_CLK_hfclkStart(void);
 void HAL_CLK_hfclkStop(void);
-
+void HAL_CLK_lfclkStart(void);
+void HAL_CLK_lfclkStop(void);
 
 #endif // #ifndef HAL_CLK_H_
 /***************************************************************************************************

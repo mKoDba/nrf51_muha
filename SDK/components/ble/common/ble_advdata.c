@@ -38,7 +38,7 @@ static uint32_t ble_device_addr_encode(uint8_t  * p_encoded_data,
     #if (NRF_SD_BLE_API_VERSION == 3)
         err_code = sd_ble_gap_addr_get(&device_addr);
     #else
-        err_code = sd_ble_gap_addr_get(&device_addr);
+        err_code = sd_ble_gap_address_get(&device_addr);
     #endif
     VERIFY_SUCCESS(err_code);
 

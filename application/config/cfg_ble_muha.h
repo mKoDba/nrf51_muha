@@ -13,36 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    cfg_bsp_ecg_ADS1192.c
+ * @file    cfg_ble_muha.h
  * @author  mario.kodba
- * @brief   Configuration for ECG ADS1192 device source file.
+ * @brief   Configuration for BLE functionality header file.
  **************************************************************************************************/
 
+#ifndef CFG_BLE_MUHA_H_
+#define CFG_BLE_MUHA_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
+#include "nrf_sdm.h"
+#include "ble.h"
 
 /***************************************************************************************************
- *                              DEFINES
+ *                                  CONSTANTS
+ **************************************************************************************************/
+#define DEVICE_NAME                     "MK_MUHA"       //!< MUHA device name used for BLE
+#define BLE_MUHA_TX_POWER_LVL           (4)             //!< TX power level in dB
+
+/***************************************************************************************************
+ *                              DATA STRUCTURES
  **************************************************************************************************/
 
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
  **************************************************************************************************/
-//! ADS1192 device assignment structure
-BSP_ECG_ADS1192_device_S ecgDevice;
-//! ADS1192 configuration structure
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+extern nrf_clock_lf_cfg_t bleLfClockXTAL;
+extern nrf_clock_lf_cfg_t bleLfClockRC;
+extern ble_gap_adv_params_t bleAdvertisingParams;
+extern ble_enable_params_t bleEnableParams;
+extern ble_gap_conn_params_t gapConnectionParams;
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_125_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
+/***************************************************************************************************
+ *                        PUBLIC FUNCTION DECLARATIONS
+ **************************************************************************************************/
 
+#endif // #ifndef CFG_BLE_MUHA_H_ */
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/

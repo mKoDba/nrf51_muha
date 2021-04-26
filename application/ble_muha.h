@@ -13,36 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    cfg_bsp_ecg_ADS1192.c
+ * @file    ble_muha.h
  * @author  mario.kodba
- * @brief   Configuration for ECG ADS1192 device source file.
+ * @brief   Implementation of BLE functionality for MUHA board header file.
  **************************************************************************************************/
 
+#ifndef BLE_MUHA_H_
+#define BLE_MUHA_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-#include "bsp_ecg_ADS1192.h"
-#include "cfg_drv_spi.h"
+#include "nrf51_muha.h"
+#include "ble.h"
 
 /***************************************************************************************************
- *                              DEFINES
+ *                              DATA STRUCTURES
  **************************************************************************************************/
 
 /***************************************************************************************************
- *                              GLOBAL VARIABLES
+ *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
-//! ADS1192 device assignment structure
-BSP_ECG_ADS1192_device_S ecgDevice;
-//! ADS1192 configuration structure
-BSP_ECG_ADS1192_config_S ecgDeviceConfig = {
-        .spiInstance = &instanceSpi0,
-        .spiConfig = &configSpi0,
+void BLE_MUHA_init(ERR_E *error);
+void BLE_MUHA_advertisingStart(ERR_E *err);
+void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent);
 
-        .samplingRate = BSP_ECG_ADS1192_convRate_125_SPS,
-        .pgaSetting = BSP_ECG_ADS1192_pga_6X
-};
-
+#endif // #ifndef BLE_MUHA_H_
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/
