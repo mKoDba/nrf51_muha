@@ -41,6 +41,7 @@
 #include "softdevice_handler.h"
 #include "ble_conn_params.h"
 #include "ble_advertising.h"
+#include "cfg_bsp_ecg_ADS1192.h"
 
 #include "ble_dis.h"
 #include "ble_bas.h"
@@ -65,6 +66,7 @@ static void BLE_MUHA_gapInit(ERR_E *err);
 static void BLE_MUHA_servicesInit(ERR_E *err);
 static void BLE_MUHA_advertisingInit(ERR_E *err);
 static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *evt);
+
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
  **************************************************************************************************/
@@ -271,6 +273,7 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
     ecgs_init.evt_handler = BLE_MUHA_onEcgsEvent;
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.cccd_write_perm);
 
     if(localErr == ERR_NONE) {
         BLE_ECGS_init(&m_ecgs, &ecgs_init, &localErr);

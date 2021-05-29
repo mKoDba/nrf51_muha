@@ -24,7 +24,17 @@
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
+#include <stdint.h>
+#include "bsp_ecg_ADS1192.h"
 
+/***************************************************************************************************
+ *                              DEFINES
+ **************************************************************************************************/
+//TODO: increase this to 20 when Magnetometer data is included
+//! Number of bytes to send for MPU9150 in each BLE connection event
+#define NRF51_MUHA_MPU9150_BLE_BYTE_SIZE    (14u)
+//! Number of bytes to send for ADS1192 in each BLE connection event
+#define NRF51_MUHA_ADS1192_BLE_BYTE_SIZE    (BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE * sizeof(int16_t))
 
 /***************************************************************************************************
  *                              DATA STRUCTURES
@@ -34,6 +44,7 @@ typedef enum ERR_ENUM {
     ERR_NONE                            = 0u,       //!< No error.
     ERR_NULL_PARAMETER,                             //!< Null parameter error.
     ERR_DRV_SPI_INIT_FAIL,                          //!< SPI driver initialization error.
+    ERR_DRV_TWI_INIT_FAIL,                          //!< TWI driver initialization error.
     ERR_DRV_TIMER_INIT_FAIL,                        //!< TIMER driver initialization error.
     ERR_GPIO_INIT_FAIL,                             //!< GPIO initialization error.
     ERR_BLE_STACK_INIT_FAIL,                        //!< BLE stack/softdevice initialization error.
@@ -44,6 +55,7 @@ typedef enum ERR_ENUM {
     ERR_BLE_CUSTOM_SERVICE_INIT_FAIL,               //!< BLE Custom service initialization error.
     ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL,            //!< BLE Custom service runtime error.
     ERR_ECG_ADS1192_START_FAIL,                     //!< ADS1192 device start error.
+    ERR_MPU9150_START_FAIL,                         //!< MPU9150 device start error.
     ERR_HAL_WATCHDOG_INIT_FAIL,                     //!< WATCHDOG module initialization error.
 
     ERR_COUNT                                       //!< Total number of errors.

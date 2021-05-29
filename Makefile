@@ -17,9 +17,12 @@ SRC_FILES += \
   $(PROJ_DIR)/application/ble_muha.c \
   $(PROJ_DIR)/application/ble_ecgs.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/bsp/bsp_mpu9150.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/config/bsp/cfg_bsp_mpu9150.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_spi.c \
+  $(PROJ_DIR)/application/config/drivers/cfg_drv_nrf_twi.c \
   $(PROJ_DIR)/application/config/hal/cfg_hal_watchdog.c \
   $(PROJ_DIR)/application/config/cfg_ble_muha.c \
   $(PROJ_DIR)/application/drivers/drv_common.c \
@@ -40,6 +43,7 @@ SRC_FILES += \
   $(SDK_DIR)/components/libraries/util/sdk_errors.c \
   $(SDK_DIR)/components/drivers_nrf/common/nrf_drv_common.c \
   $(SDK_DIR)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/nrf_drv_twi.c \
   $(SDK_DIR)/components/toolchain/gcc/gcc_startup_nrf51.S \
   $(SDK_DIR)/components/toolchain/system_nrf51.c \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler/softdevice_handler.c \

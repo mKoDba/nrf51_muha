@@ -34,7 +34,7 @@
  *                              DEFINES
  **************************************************************************************************/
 #define DEBUG false                                     //!< DEBUG enable macro
-#define BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE   (100u)  //!< Number of ADC samples to be stored to buffer
+#define BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE   (10u)   //!< Number of ADC samples (16-bit) to be stored to buffer
 
 /***************************************************************************************************
  *                              ENUMERATIONS
@@ -155,7 +155,8 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
-    int16_t adcVal[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
+    int16_t buffer1[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
+    int16_t buffer2[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
     uint16_t sampleIndex;                       //!< Current index of sample
 #if (DEBUG == true)
     int16_t temperature;                        //!< Temperature of device
@@ -163,6 +164,8 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
     float analogVddSupply;                      //!< Analog VDD supply
 #endif // #if (DEBUG == true)
     bool isInitialized;                         //!< Is device initialized
+    volatile bool updateReady;                           //!< Is device ready for BLE data update
+    volatile bool changeBuffer;
 } BSP_ECG_ADS1192_device_S;
 /***************************************************************************************************
  *                              GLOBAL VARIABLES

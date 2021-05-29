@@ -25,10 +25,13 @@
 #include <stddef.h>
 
 #include "nrf_drv_gpiote.h"
+#include "nrf_drv_twi.h"
 #include "drv_timer.h"
 #include "drv_spi.h"
 #include "nrf51_muha.h"
 #include "ble_muha.h"
+#include "ble_ecgs.h"
+#include "ble_bas.h"
 
 #include "nrf_gpio.h"
 #include "hal_clk.h"
@@ -36,7 +39,9 @@
 
 #include "cfg_drv_spi.h"
 #include "cfg_drv_timer.h"
+#include "cfg_drv_nrf_twi.h"
 #include "cfg_bsp_ecg_ADS1192.h"
+#include "cfg_bsp_mpu9150.h"
 #include "cfg_nrf51_muha_pinout.h"
 #include "cfg_hal_watchdog.h"
 #include "SEGGER_RTT.h"
@@ -105,7 +110,16 @@ void NRF51_MUHA_start(ERR_E *error) {
 
     ERR_E localErr = ERR_NONE;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+//    int16_t temp = 0;
+
+static uint8_t battery_level = 0u;
+
+    uint8_t mpuBuffer[14u] = { 0u };
+    int16_t gyroVals[3u] = { 0 };
+    float accVals[3] = { 0 };
+    int16_t temp = 0;
 
 //    while(true){
 //        ;
@@ -124,13 +138,49 @@ void NRF51_MUHA_start(ERR_E *error) {
         localErr = ERR_ECG_ADS1192_START_FAIL;
     }
 
-    if(localErr == ERR_NONE) {
-        BLE_MUHA_advertisingStart(&localErr);
+//    if(localErr == ERR_NONE) {
+//        BLE_MUHA_advertisingStart(&localErr);
+//    }
+//
+//    // wait for established connection
+//    while(m_ecgs.conn_handle == BLE_CONN_HANDLE_INVALID);
+
+    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
+    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+
+    BSP_MPU9150_readMultiReg(&mpuDevice, BSP_MPU9150_REG_ACCEL_XOUT_H, 14u, &mpuBuffer[0], &mpuErr);
+
+    uint32_t endTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+
+    uint32_t timeDiff = DRV_TIMER_getTimeDiff(&instanceTimer1, &startTime, &endTime);
+
+
+    //    SEGGER_RTT_printf(0u, "%d\n", BSP_MPU9150_calculateTemperature(&mpuBuffer[0]));
+    BSP_MPU9150_calculateGyroValues(&mpuDevice, &mpuBuffer[0], &gyroVals[0]);
+    BSP_MPU9150_calculateAccValues(&mpuDevice, &mpuBuffer[0], &accVals[0]);
+
+    while(1) {
+
     }
 
-    // TODO: [mario.kodba 29.11.2020.] Add RTOS start here and remove loop?
+
+    // main loop
     while(true){
-        ;
+        // if the buffer is filled, update BLE data
+        if(ecgDevice.updateReady == true) {
+            battery_level++;
+            ble_bas_battery_level_update(&m_bas, battery_level);
+            if(ecgDevice.changeBuffer == 0u) {
+                // update MPU9150 data before ECG data, so the notification for ECG will be valid for MPU data also
+                BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuBuffer[0], &localErr);
+                BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer1[0], &localErr);
+            } else {
+                // update MPU9150 data before ECG data, so the notification for ECG will be valid for MPU data also
+                BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuBuffer[0], &localErr);
+                BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer2[0], &localErr);
+            }
+            ecgDevice.updateReady = false;
+        }
     }
 
     if(error != NULL) {
@@ -187,6 +237,7 @@ static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 
     ERR_E drvInitErr = ERR_NONE;
+    uint32_t err_code;
 #if (USE_HFCLK == true)
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
 #endif // #if (USE_HFCLK == true)
@@ -207,8 +258,16 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
     // initialize watchdog timer
     HAL_WATCHDOG_init(&configWatchdog, NULL, &drvInitErr);
 
-    // initialize SPI instance
+    // initialize SPI 0 peripheral
     DRV_SPI_init(&instanceSpi0, &configSpi0, NULL, &spiErr);
+
+    // initialize TWI 1 peripheral
+    err_code = nrf_drv_twi_init(&instanceTwi1, &configTwi1, nrf_drv_mpu_twi_event_handler, NULL);
+    if(err_code != NRF_SUCCESS) {
+        drvInitErr = ERR_DRV_SPI_INIT_FAIL;
+    }
+
+    nrf_drv_twi_enable(&instanceTwi1);
 
     if(outErr != NULL) {
         *outErr = drvInitErr;
@@ -226,12 +285,25 @@ static void NRF51_MUHA_initDrivers(ERR_E *outErr) {
 static void NRF51_MUHA_initBsp(ERR_E *outErr) {
 
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
+    ERR_E err = ERR_NONE;
 
     // initialize ADS1192 ECG device
     BSP_ECG_ADS1192_init(&ecgDevice, &ecgDeviceConfig, &ecgErr);
 
+    if(ecgErr != BSP_ECG_ADS1192_err_NONE) {
+        err = ERR_ECG_ADS1192_START_FAIL;
+    }
+
+    // initialize MPU-9150 device
+    BSP_MPU9150_init(&mpuDevice, &mpuDeviceConfig, &mpuErr);
+
+    if(mpuErr != BSP_MPU9150_err_NONE) {
+        err = ERR_MPU9150_START_FAIL;
+    }
+
     if(outErr != NULL) {
-        *outErr = ecgErr;
+        *outErr = err;
     }
 }
 

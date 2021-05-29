@@ -411,8 +411,9 @@ void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
  * @brief Function returns time difference in us between two time measurements.
  ***************************************************************************************************
  * @param [in]   *tInstance  - pointer to timer instance structure.
- * @param [in]   *start      - first timer value.
- * @param [in]   *stop       - second timer value.
+ * @param [in]   *start      - pointer to first timer value.
+ * @param [in]   *stop       - pointer to second timer value.
+ * @return Time difference between stop and start values [us].
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    28.12.2020.

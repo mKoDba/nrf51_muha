@@ -359,7 +359,7 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
     outData[1] = inData[2] | (inData[1] << BSP_ECG_ADS1192_BYTE_SHIFT);
     outData[2] = inData[3] | (inData[2] << BSP_ECG_ADS1192_BYTE_SHIFT);
 
-    SEGGER_RTT_printf(0, ",%d,%d,%d\n", outData[0], outData[1], outData[2]);
+//    SEGGER_RTT_printf(0, ",%d,%d,%d\n", outData[0], outData[1], outData[2]);
 }
 
 /***********************************************************************************************//**
@@ -707,14 +707,20 @@ void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_pol
     // convert data to correct format
     BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
 
-    ecgDevice.adcVal[ecgDevice.sampleIndex] = outData[0];
-    ecgDevice.sampleIndex++;
-    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
-        // send data over BLE
+    // fill buffer
+    if(ecgDevice.changeBuffer == true) {
+        ecgDevice.buffer2[ecgDevice.sampleIndex] = outData[2];
+    } else {
+        ecgDevice.buffer1[ecgDevice.sampleIndex] = outData[2];
     }
 
-    BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &outData[2], NULL);
-    ecgDevice.sampleIndex = ecgDevice.sampleIndex % BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE;
+    ecgDevice.sampleIndex++;
+
+    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
+        ecgDevice.updateReady = true;
+        ecgDevice.sampleIndex = 0u;
+        ecgDevice.changeBuffer ^= 1u;
+    }
 }
 
 #if (DEBUG == true)
