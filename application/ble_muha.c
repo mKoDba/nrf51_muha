@@ -46,6 +46,7 @@
 #include "ble_dis.h"
 #include "ble_bas.h"
 #include "ble_ecgs.h"
+#include "ble_mpu.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -55,6 +56,7 @@
 #define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    /*!< Number of peripheral links used by the application.
                                                              When changing this number remember to adjust the RAM settings */
 BLE_ECGS_custom_S m_ecgs;
+BLE_ECGS_custom_S m_mpu;
 
 ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
 
@@ -243,8 +245,8 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
 
     ERR_E localErr = ERR_NONE;
     uint32_t nrfErrCode = NRF_SUCCESS;
-    ble_bas_init_t bas_init;
     BLE_ECGS_customInit_S ecgs_init;
+    ble_bas_init_t bas_init;
 
     // initialize Battery Service.
     memset(&bas_init, 0, sizeof(bas_init));
@@ -274,6 +276,10 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.write_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.cccd_write_perm);
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.cccd_write_perm);
 
     if(localErr == ERR_NONE) {
         BLE_ECGS_init(&m_ecgs, &ecgs_init, &localErr);

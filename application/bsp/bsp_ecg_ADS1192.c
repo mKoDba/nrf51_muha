@@ -716,8 +716,9 @@ void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_pol
 
     ecgDevice.sampleIndex++;
 
+    // with BLE notification, only 20 user data bytes is allowed on nRF51422
     if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
-        ecgDevice.updateReady = true;
+        ecgDevice.bufferFull = true;
         ecgDevice.sampleIndex = 0u;
         ecgDevice.changeBuffer ^= 1u;
     }

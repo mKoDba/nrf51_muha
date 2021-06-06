@@ -24,6 +24,7 @@
  **************************************************************************************************/
 #include <stddef.h>
 
+#include "app_timer.h"
 #include "nrf_drv_gpiote.h"
 #include "nrf_drv_twi.h"
 #include "drv_timer.h"
@@ -31,6 +32,7 @@
 #include "nrf51_muha.h"
 #include "ble_muha.h"
 #include "ble_ecgs.h"
+#include "ble_mpu.h"
 #include "ble_bas.h"
 
 #include "nrf_gpio.h"
@@ -51,12 +53,19 @@
  **************************************************************************************************/
 #define USE_HFCLK true
 
+#define APP_TIMER_PRESCALER              0                                           /**< Value of the RTC1 PRESCALER register. */
+#define APP_TIMER_OP_QUEUE_SIZE          4                                           /**< Size of timer operation queues. */
+#define MPU_DATA_UPDATE_INTERVAL         APP_TIMER_TICKS(8, APP_TIMER_PRESCALER)     // timer interrupt every 8 ms
+
+APP_TIMER_DEF(m_mpu_timer_id);                        /**< Battery timer. */
+
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
 static void NRF51_MUHA_initGpio(ERR_E *outErr);
 static void NRF51_MUHA_initDrivers(ERR_E *outErr);
 static void NRF51_MUHA_initBsp(ERR_E *outErr);
+static void NRF51_MUHA_mpuDataReadyInterrupt(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
@@ -112,14 +121,8 @@ void NRF51_MUHA_start(ERR_E *error) {
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
     BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
-//    int16_t temp = 0;
 
-static uint8_t battery_level = 0u;
-
-    uint8_t mpuBuffer[14u] = { 0u };
-    int16_t gyroVals[3u] = { 0 };
-    float accVals[3] = { 0 };
-    int16_t temp = 0;
+    int16_t mpuBleBuffer[7u] = { 0 };
 
 //    while(true){
 //        ;
@@ -130,6 +133,15 @@ static uint8_t battery_level = 0u;
 //    }
 
 
+//    // Initialize timer module
+//    APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+//
+//    // Create timers
+//    uint32_t err_code = app_timer_create(&m_mpu_timer_id,
+//            APP_TIMER_MODE_REPEATED,
+//            mpu_data_update_timeout_handler);
+
+
     if(localErr == ERR_NONE) {
         BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
     }
@@ -138,48 +150,51 @@ static uint8_t battery_level = 0u;
         localErr = ERR_ECG_ADS1192_START_FAIL;
     }
 
-//    if(localErr == ERR_NONE) {
-//        BLE_MUHA_advertisingStart(&localErr);
-//    }
-//
-//    // wait for established connection
-//    while(m_ecgs.conn_handle == BLE_CONN_HANDLE_INVALID);
-
-    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
-    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
-
-    BSP_MPU9150_readMultiReg(&mpuDevice, BSP_MPU9150_REG_ACCEL_XOUT_H, 14u, &mpuBuffer[0], &mpuErr);
-
-    uint32_t endTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
-
-    uint32_t timeDiff = DRV_TIMER_getTimeDiff(&instanceTimer1, &startTime, &endTime);
-
-
-    //    SEGGER_RTT_printf(0u, "%d\n", BSP_MPU9150_calculateTemperature(&mpuBuffer[0]));
-    BSP_MPU9150_calculateGyroValues(&mpuDevice, &mpuBuffer[0], &gyroVals[0]);
-    BSP_MPU9150_calculateAccValues(&mpuDevice, &mpuBuffer[0], &accVals[0]);
-
-    while(1) {
-
+    if(localErr == ERR_NONE) {
+        nrf_drv_gpiote_in_event_enable(MPU_INT, true);
     }
+
+//    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
+//    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+//
+//    uint32_t endTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+//
+//    uint32_t timeDiff = DRV_TIMER_getTimeDiff(&instanceTimer1, &startTime, &endTime);
+
+    if(localErr == ERR_NONE) {
+        BLE_MUHA_advertisingStart(&localErr);
+    }
+
+    // wait for established connection
+    while(m_ecgs.conn_handle == BLE_CONN_HANDLE_INVALID);
+
+//
+//    // start application timer
+//    err_code = app_timer_start(m_mpu_timer_id, MPU_DATA_UPDATE_INTERVAL, NULL);
 
 
     // main loop
     while(true){
-        // if the buffer is filled, update BLE data
-        if(ecgDevice.updateReady == true) {
-            battery_level++;
-            ble_bas_battery_level_update(&m_bas, battery_level);
+
+        // if the ECG buffer is filled, update BLE data
+        if(ecgDevice.bufferFull == true) {
+
             if(ecgDevice.changeBuffer == 0u) {
-                // update MPU9150 data before ECG data, so the notification for ECG will be valid for MPU data also
-                BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuBuffer[0], &localErr);
                 BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer1[0], &localErr);
             } else {
-                // update MPU9150 data before ECG data, so the notification for ECG will be valid for MPU data also
-                BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuBuffer[0], &localErr);
                 BLE_ECGS_customValueUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer2[0], &localErr);
             }
-            ecgDevice.updateReady = false;
+
+            ecgDevice.bufferFull = false;
+        }
+
+        if(mpuDevice.dataReady == true) {
+//            // read new values from MPU
+//            BSP_MPU9150_updateValues(&mpuDevice, &mpuBleBuffer[0], &mpuErr);
+            // update BLE data and push notification
+            BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuDevice.dataBuffer[0], &localErr);
+
+            mpuDevice.dataReady = false;
         }
     }
 
@@ -204,15 +219,23 @@ static uint8_t battery_level = 0u;
 static void NRF51_MUHA_initGpio(ERR_E *outErr) {
 
     ret_code_t gpioErr = NRF_SUCCESS;
+
     // pin interrupt on transition high->low, since nDRDY is active low
-    nrf_drv_gpiote_in_config_t inPinConfig = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    nrf_drv_gpiote_in_config_t inEcgPinConfig = GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    // pin interrupt on transition low->high
+    nrf_drv_gpiote_in_config_t inMpuPinConfig = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
+
 
     // initialize GPIO task event
     gpioErr = nrf_drv_gpiote_init();
 
     // configure interrupt pin for ECG_DRDY signal
     if(gpioErr == NRF_SUCCESS) {
-       gpioErr = nrf_drv_gpiote_in_init(ECG_DRDY, &inPinConfig, BSP_ECG_ADS1192_DrdyPin_IRQHandler);
+       gpioErr = nrf_drv_gpiote_in_init(ECG_DRDY, &inEcgPinConfig, BSP_ECG_ADS1192_DrdyPin_IRQHandler);
+    }
+    // configure interrupt pin for MPU_INT signal
+    if(gpioErr == NRF_SUCCESS) {
+       gpioErr = nrf_drv_gpiote_in_init(MPU_INT, &inMpuPinConfig, NRF51_MUHA_mpuDataReadyInterrupt);
     }
 
     // initialize output pins
@@ -305,6 +328,29 @@ static void NRF51_MUHA_initBsp(ERR_E *outErr) {
     if(outErr != NULL) {
         *outErr = err;
     }
+}
+
+/***********************************************************************************************//**
+ * @brief Callback for new data ready signal, called depending on sampling period of MPU-9150.
+ * @details Sampling period is set on MPU-9150 initialization in BSP_MPU9150_configuration function.
+ ***************************************************************************************************
+ * @param [in]  pin    - GPIOTE pin number.
+ * @param [in]  action - GPIOTE trigger action.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    06.06.2021.
+ **************************************************************************************************/
+static void NRF51_MUHA_mpuDataReadyInterrupt(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+
+    BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
+
+    (void) pin;
+    (void) action;
+
+    mpuDevice.dataReady = true;
+
+    // read new values from MPU
+    BSP_MPU9150_updateValues(&mpuDevice, &mpuDevice.dataBuffer[0], &mpuErr);
 }
 
 /***************************************************************************************************

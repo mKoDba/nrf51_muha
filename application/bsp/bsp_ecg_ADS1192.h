@@ -164,7 +164,7 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
     float analogVddSupply;                      //!< Analog VDD supply
 #endif // #if (DEBUG == true)
     bool isInitialized;                         //!< Is device initialized
-    volatile bool updateReady;                           //!< Is device ready for BLE data update
+    volatile bool bufferFull;                   //!< Is device data buffer filled
     volatile bool changeBuffer;
 } BSP_ECG_ADS1192_device_S;
 /***************************************************************************************************

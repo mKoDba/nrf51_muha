@@ -33,9 +33,9 @@
  **************************************************************************************************/
 #define BLE_MUHA_ADVERTISING_NO_TIMEOUT (0u)                                //!< Timeout in seconds after which advertising will timeout, 0 for no timeout.
 
-#define BLE_MUHA_GAP_MIN_CONN_INTERVAL   MSEC_TO_UNITS(7.5, UNIT_1_25_MS)   //!< Minimum acceptable connection interval (0.4 seconds).
-#define BLE_MUHA_GAP_MAX_CONN_INTERVAL   MSEC_TO_UNITS(8, UNIT_1_25_MS)   //!< Maximum acceptable connection interval (0.65 second).
-#define BLE_MUHA_GAP_SLAVE_LATENCY       (0u)                               //!< Slave latency.
+#define BLE_MUHA_GAP_MIN_CONN_INTERVAL   MSEC_TO_UNITS(7.5, UNIT_1_25_MS)   //!< Minimum acceptable connection interval (7.5 milliseconds).
+#define BLE_MUHA_GAP_MAX_CONN_INTERVAL   MSEC_TO_UNITS(8, UNIT_1_25_MS)     //!< Maximum acceptable connection interval (8 milliseconds).
+#define BLE_MUHA_GAP_SLAVE_LATENCY       (0u)                               //!< Slave latency - if set to 0, no connection event will be skipped.
 #define BLE_MUHA_CONN_SUP_TIMEOUT        MSEC_TO_UNITS(4000, UNIT_10_MS)    //!< Connection supervisory timeout (4 seconds).
 
 /***************************************************************************************************

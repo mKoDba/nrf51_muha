@@ -31,6 +31,11 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
+#define BSP_MPU9150_READ_DATA_SIZE_IN_BYTES     (14u)           //!< Number of bytes to be read on single TWI transfer
+#define BSP_MPU9150_ACC_DATA_TWI_OFFSET         (0u)            //!< Index (offset) of accelerometer data in TWI reading
+#define BSP_MPU9150_TEMP_DATA_TWI_OFFSET        (6u)            //!< Index (offset) of temperature data in TWI reading
+#define BSP_MPU9150_GYRO_DATA_TWI_OFFSET        (8u)            //!< Index (offset) of gyroscope data in TWI reading
+
 #define BSP_MPU9150_WRITE_BYTE                  (0b11010000u)   //!< MPU-9150 I2C write byte
 #define BSP_MPU9150_READ_BYTE                   (0b11010001u)   //!< MPU-9150 I2C read byte
 
@@ -55,7 +60,7 @@
 
 // pre-defined register values to send
 #define BSP_MPU9150_RESET_SIGNAL_PATH_VALUE     (0x7u)          //!< Value to send in order to reset signal paths
-#define BSP_MPU9150_PLL_REFERENCE_VALUE         (0x1u)          //!< Value to send to set PLL reference as X Gyroscope
+#define BSP_MPU9150_PLL_REFERENCE_VALUE         (0x01u)         //!< Value to send to set PLL reference as X Gyroscope
 #define BSP_MPU9150_DEVICE_ID_VALUE             (0b01101000u)   //!< Device ID that will verify correct device operation
 
 
@@ -70,6 +75,18 @@ static volatile bool twi_rx_done = false;
  **************************************************************************************************/
 __INLINE static void BSP_MPU9150_waitRxTransferFinish(BSP_MPU9150_err_E *outErr);
 __INLINE static void BSP_MPU9150_waitTxTransferFinish(BSP_MPU9150_err_E *outErr);
+__INLINE static void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, int16_t *outTemp);
+__INLINE static void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
+        const uint8_t *rawValue,
+        int16_t *outGyro);
+__INLINE static void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
+        const uint8_t *rawValue,
+        int16_t *outAcc);
+__INLINE static void BSP_MPU9150_packDataToSend(const int16_t *gyroVals,
+        const int16_t *accVals,
+        const int16_t temp,
+        int16_t *outBuffer);
+
 static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
         const uint8_t regAddr,
         const uint8_t regData,
@@ -78,11 +95,11 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
         const uint8_t regAddr,
         uint8_t *data,
         BSP_MPU9150_err_E *outErr);
-//static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
-//        const uint8_t startRegAddr,
-//        const uint8_t length,
-//        uint8_t *data,
-//        BSP_MPU9150_err_E *outErr);
+static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
+        const uint8_t startRegAddr,
+        const uint8_t length,
+        uint8_t *data,
+        BSP_MPU9150_err_E *outErr);
 static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU9150_err_E *outErr);
 
 /***************************************************************************************************
@@ -161,6 +178,47 @@ void BSP_MPU9150_init(BSP_MPU9150_device_S *inDevice,
     }
 }
 
+/***********************************************************************************************//**
+ * @brief Updates temperature, accelerometer, gyroscope data to buffer.
+ ***************************************************************************************************
+ * @param [in]  *inDevice   - pointer to device structure for MPU-9150 driver.
+ * @param [in]  *newValues  - pointer to buffer that contains new updated values.
+ * @param [out] *outErr     - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    01.06.2021
+ **************************************************************************************************/
+void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
+        int16_t *newValues,
+        BSP_MPU9150_err_E *outErr) {
+
+    BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
+    // buffer for raw register values
+    uint8_t byteBuffer[BSP_MPU9150_READ_DATA_SIZE_IN_BYTES];
+    int16_t accVals[6];
+    int16_t gyroVals[6];
+    int16_t temp = 0;
+
+    // has critical sections inside
+    BSP_MPU9150_readMultiReg(inDevice,
+            BSP_MPU9150_REG_ACCEL_XOUT_H,
+            BSP_MPU9150_READ_DATA_SIZE_IN_BYTES,
+            &byteBuffer[0],
+            &mpuErr);
+
+    if(mpuErr == BSP_MPU9150_err_NONE) {
+        BSP_MPU9150_calculateAccValues(inDevice, &byteBuffer[BSP_MPU9150_ACC_DATA_TWI_OFFSET], &accVals[0]);
+        BSP_MPU9150_calculateTemperature(&byteBuffer[BSP_MPU9150_TEMP_DATA_TWI_OFFSET], &temp);
+        BSP_MPU9150_calculateGyroValues(inDevice, &byteBuffer[BSP_MPU9150_GYRO_DATA_TWI_OFFSET], &gyroVals[0]);
+        BSP_MPU9150_packDataToSend(&gyroVals[0], &accVals[0], temp, &newValues[0]);
+    }
+
+    if(outErr != NULL) {
+        *outErr = mpuErr;
+    }
+}
+
+
 void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context) {
 
     switch(p_event->type) {
@@ -212,7 +270,7 @@ static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
 
     uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
-    uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
 
     // assemble I2C data - 1 byte register address, 1 byte data
     uint8_t msg[BSP_MPU9150_SINGLE_REG_MSG_SIZE] = { regAddr, regData };
@@ -260,7 +318,7 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
 
     uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
-    uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
 
     // after first START condition send |SLAVE_ADDR+W|REG_ADDR|
     err_code = nrf_drv_twi_tx(inDevice->twiInstance,
@@ -319,7 +377,7 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
  * @author  mario.kodba
  * @date    15.05.2021
  **************************************************************************************************/
-void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
+static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
         const uint8_t startRegAddr,
         const uint8_t length,
         uint8_t *data,
@@ -327,7 +385,7 @@ void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
 
     uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
-    uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
 
     // after first START condition send |SLAVE_ADDR+W|START_REG_ADDR|
     err_code = nrf_drv_twi_tx(inDevice->twiInstance,
@@ -377,22 +435,21 @@ void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
 /***********************************************************************************************//**
  * @brief Function calculates temperature value in degrees using datasheet conversion function.
  ***************************************************************************************************
- * @param  [in] rawValue     -   pointer to raw temperature value, read from register.
- * @return Temperature value in degree celsius.
+ * @param  [in]  rawValue     -   pointer to raw temperature value, read from register.
+ * @param  [out] *outTemp     -   pointer to output temperature data.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    25.05.2021
  **************************************************************************************************/
-int16_t BSP_MPU9150_calculateTemperature(const uint8_t *rawValue) {
+__INLINE static void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, int16_t *outTemp) {
 
     int16_t retVal = 0;
 
-    if(rawValue != NULL) {
+    if((rawValue != NULL) && (outTemp != NULL)) {
         retVal = rawValue[1] + (rawValue[0] << 8u);
         retVal = retVal / BSP_MPU9150_TEMP_CONVERSION_CONST_1 + BSP_MPU9150_TEMP_CONVERSION_CONST_2;
+        *outTemp = retVal;
     }
-
-    return retVal;
 }
 
 /***********************************************************************************************//**
@@ -405,7 +462,7 @@ int16_t BSP_MPU9150_calculateTemperature(const uint8_t *rawValue) {
  * @author  mario.kodba
  * @date    25.05.2021
  **************************************************************************************************/
-void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
+__INLINE static void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
         const uint8_t *rawValue,
         int16_t *outGyro) {
 
@@ -471,7 +528,7 @@ void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
  * @author  mario.kodba
  * @date    25.05.2021
  **************************************************************************************************/
-void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
+__INLINE static void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
         const uint8_t *rawValue,
         int16_t *outAcc) {
 
@@ -524,6 +581,35 @@ void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
         outAcc[1] = accY;
         // Z-axis Accelerometer
         outAcc[2] = accZ;
+    }
+}
+
+/***********************************************************************************************//**
+ * @brief Function calculates temperature value in degrees using datasheet conversion function.
+ ***************************************************************************************************
+ * @param  [in]  *gyroVals      -   pointer to 16-bit interpreted gyro data (deg/s).
+ * @param  [in]  *accVals       -   pointer to 16-bit interpreted accelerometer data (mG).
+ * @param  [in]  temp           -   interpreted temperature value.
+ * @param  [out] *outBuffer     -   pointer to output buffer which is sent over BLE.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    25.05.2021
+ **************************************************************************************************/
+__INLINE static void BSP_MPU9150_packDataToSend(const int16_t *gyroVals,
+        const int16_t *accVals,
+        const int16_t temp,
+        int16_t *outBuffer) {
+
+    if((gyroVals != NULL) && (accVals != NULL) && (outBuffer != NULL)) {
+        outBuffer[0] = gyroVals[0];
+        outBuffer[1] = gyroVals[1];
+        outBuffer[2] = gyroVals[2];
+
+        outBuffer[3] = accVals[0];
+        outBuffer[4] = accVals[1];
+        outBuffer[5] = accVals[2];
+
+        outBuffer[6] = temp;
     }
 }
 
@@ -585,6 +671,7 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
     BSP_MPU9150_gyroConfigReg_U gyroConfigReg = { .R = 0u };
     BSP_MPU9150_accConfigReg_U accConfigReg = { .R = 0u };
     BSP_MPU9150_intConfigReg_U intConfigReg = { .R = 0u };
+    BSP_MPU9150_fifoConfigReg_U fifoConfigReg = { .R = 0u };
     BSP_MPU9150_intEnableReg_U intEnableReg = { .R = 0u };
 
     if(inDevice != NULL) {
@@ -613,6 +700,22 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
         }
 
         /*
+         * FIFO enable register sets which sensor output will be written to FIFO buffer
+         */
+        if(err == BSP_MPU9150_err_NONE ) {
+//            fifoConfigReg.B.accelFifoEn = true;
+//            fifoConfigReg.B.tempFifoEn = true;
+//            fifoConfigReg.B.xgFifoEn = true;
+//            fifoConfigReg.B.ygFifoEn = true;
+//            fifoConfigReg.B.zgFifoEn = true;
+//
+            BSP_MPU9150_writeSingleReg(inDevice,
+                    BSP_MPU9150_REG_FIFO_EN,
+                    fifoConfigReg.R,
+                    &err);
+        }
+
+        /*
          * Interrupt configuration sets up interrupt behavior
          */
         if(err == BSP_MPU9150_err_NONE ) {
@@ -621,7 +724,8 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
             intConfigReg.B.i2cBypassEn = false;
             intConfigReg.B.intLevel = false;
             intConfigReg.B.intOpen = false;
-            intConfigReg.B.intRdClear = false;
+            // clear interrupt status on any read operation
+            intConfigReg.B.intRdClear = true;
             intConfigReg.B.latchIntEn = false;
 
             BSP_MPU9150_writeSingleReg(inDevice,
@@ -666,7 +770,8 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
         if(err == BSP_MPU9150_err_NONE ) {
             intEnableReg.B.i2cMstIntEn = false;
             intEnableReg.B.fifoOverflowEn = false;
-            intEnableReg.B.dataRdyEn = false;
+            // enable DATA READY interrupt signal on pin
+            intEnableReg.B.dataRdyEn = true;
 
             BSP_MPU9150_writeSingleReg(inDevice,
                     BSP_MPU9150_REG_INT_ENABLE,

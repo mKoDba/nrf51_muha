@@ -168,9 +168,9 @@ typedef enum BSP_MPU9150_gyroFsRange_ENUM {
 typedef union BSP_MPU9150_configReg_UNION {
     uint8_t R;                                  //!< Configuration register value
     struct {
-       uint8_t              : 2;                //!< Not used
-       uint8_t  extSyncSet  : 3;                //!< Configures FSYNC pin sampling setting
        uint8_t  dlpfCfg     : 3;                //!< Digital Low Pass Filter setting
+       uint8_t  extSyncSet  : 3;                //!< Configures FSYNC pin sampling setting
+       uint8_t              : 2;                //!< Not used
     } B;                                        //!< Configuration register bits
 } BSP_MPU9150_configReg_U;
 
@@ -178,11 +178,11 @@ typedef union BSP_MPU9150_configReg_UNION {
 typedef union BSP_MPU9150_gyroConfigReg_UNION {
     uint8_t R;                                  //!< Gyroscope configuration register value
     struct {
-       uint8_t  xg_st       : 1;                //!< Set X-axis gyroscope self-test bit
-       uint8_t  yg_st       : 1;                //!< Set Y-axis gyroscope self-test bit
-       uint8_t  zg_st       : 1;                //!< Set Z-axis gyroscope self-test bit
-       uint8_t  fsSel       : 2;                //!< Configures gyroscope full-scale range
        uint8_t              : 3;                //!< Not used
+       uint8_t  fsSel       : 2;                //!< Configures gyroscope full-scale range
+       uint8_t  zg_st       : 1;                //!< Set Z-axis gyroscope self-test bit
+       uint8_t  yg_st       : 1;                //!< Set Y-axis gyroscope self-test bit
+       uint8_t  xg_st       : 1;                //!< Set X-axis gyroscope self-test bit
     } B;                                        //!< Gyroscope configuration register bits
 } BSP_MPU9150_gyroConfigReg_U;
 
@@ -190,11 +190,11 @@ typedef union BSP_MPU9150_gyroConfigReg_UNION {
 typedef union BSP_MPU9150_accConfigReg_UNION {
     uint8_t R;                                  //!< Accelerometer configuration register value
     struct {
-       uint8_t  xa_st       : 1;                //!< Set X-axis accelerometer self-test bit
-       uint8_t  ya_st       : 1;                //!< Set Y-axis accelerometer self-test bit
-       uint8_t  za_st       : 1;                //!< Set Z-axis accelerometer self-test bit
-       uint8_t  afsSel      : 2;                //!< Configures accelerometer full-scale range
        uint8_t              : 3;                //!< Not used
+       uint8_t  afsSel      : 2;                //!< Configures accelerometer full-scale range
+       uint8_t  za_st       : 1;                //!< Set Z-axis accelerometer self-test bit
+       uint8_t  ya_st       : 1;                //!< Set Y-axis accelerometer self-test bit
+       uint8_t  xa_st       : 1;                //!< Set X-axis accelerometer self-test bit
     } B;                                        //!< Accelerometer configuration register bits
 } BSP_MPU9150_accConfigReg_U;
 
@@ -202,12 +202,12 @@ typedef union BSP_MPU9150_accConfigReg_UNION {
 typedef union BSP_MPU9150_fifoConfigReg_UNION {
     uint8_t R;                                  //!< FIFO buffer configuration register value
     struct {
-       uint8_t  tempFifoEn  : 1;                //!< Set temperature FIFO enable
-       uint8_t  xgFifoEn    : 1;                //!< Set X-axis gyroscope FIFO enable
-       uint8_t  ygFifoEn    : 1;                //!< Set Y-axis gyroscope FIFO enable
-       uint8_t  zgFifoEn    : 1;                //!< Set Z-axis gyroscope FIFO enable
-       uint8_t  accelFifoEn : 1;                //!< Set accelerometer FIFO enable
        uint8_t              : 3;                //!< Not used on nRF51 MUHA board
+       uint8_t  accelFifoEn : 1;                //!< Set accelerometer FIFO enable
+       uint8_t  zgFifoEn    : 1;                //!< Set Z-axis gyroscope FIFO enable
+       uint8_t  ygFifoEn    : 1;                //!< Set Y-axis gyroscope FIFO enable
+       uint8_t  xgFifoEn    : 1;                //!< Set X-axis gyroscope FIFO enable
+       uint8_t  tempFifoEn  : 1;                //!< Set temperature FIFO enable
     } B;                                        //!< FIFO buffer configuration register bits
 } BSP_MPU9150_fifoConfigReg_U;
 
@@ -215,11 +215,11 @@ typedef union BSP_MPU9150_fifoConfigReg_UNION {
 typedef union BSP_MPU9150_intEnableReg_UNION {
     uint8_t R;                                  //!< Interrupt enable register value
     struct {
-       uint8_t                 : 3;             //!< Not used
-       uint8_t  fifoOverflowEn : 1;             //!< Enable interrupt on FIFO buffer overflow
-       uint8_t  i2cMstIntEn    : 1;             //!< Enables any of the I2C Master interrupt sources to generate an interrupt
-       uint8_t                 : 2;             //!< Not used
        uint8_t  dataRdyEn      : 1;             //!< Enable interrupt when write operation to all sensor registers completed
+       uint8_t                 : 2;             //!< Not used
+       uint8_t  i2cMstIntEn    : 1;             //!< Enables any of the I2C Master interrupt sources to generate an interrupt
+       uint8_t  fifoOverflowEn : 1;             //!< Enable interrupt on FIFO buffer overflow
+       uint8_t                 : 3;             //!< Not used
     } B;                                        //!< Interrupt enable register bits
 } BSP_MPU9150_intEnableReg_U;
 
@@ -227,14 +227,14 @@ typedef union BSP_MPU9150_intEnableReg_UNION {
 typedef union BSP_MPU9150_intConfigReg_UNION {
     uint8_t R;                                  //!< Interrupt configuration register value
     struct {
-       uint8_t  intLevel       : 1;             //!< When 0 - logic level for the INT pin is active high, when 1 - logic level for the INT pin is active low
-       uint8_t  intOpen        : 1;             //!< When 0 - INT pin is configured as push-pull, when 1 - INT pin is configured as open drain
-       uint8_t  latchIntEn     : 1;             //!< When 0 - INT pin emits a 50us long pulse, when 1 - INT pin is held high until the interrupt is cleared
-       uint8_t  intRdClear     : 1;             //!< When 0 - interrupt status bits are cleared by reading INT_STATUS, when 1 - cleared by read operation
-       uint8_t  fsyncIntLevel  : 1;             //!< When 0 - logic level for the FSYNC pin is active high, when 1 - active low
-       uint8_t  fsyncIntEn     : 1;             //!< When 0 - disables interrupt to host CPU, when 1 - enables it
-       uint8_t  i2cBypassEn    : 1;             //!< Enables access of host CPU directly to MPU-9150 auxiliary I2C bus
        uint8_t                 : 1;             //!< Not used
+       uint8_t  i2cBypassEn    : 1;             //!< Enables access of host CPU directly to MPU-9150 auxiliary I2C bus
+       uint8_t  fsyncIntEn     : 1;             //!< When 0 - disables interrupt to host CPU, when 1 - enables it
+       uint8_t  fsyncIntLevel  : 1;             //!< When 0 - logic level for the FSYNC pin is active high, when 1 - active low
+       uint8_t  intRdClear     : 1;             //!< When 0 - interrupt status bits are cleared by reading INT_STATUS, when 1 - cleared by read operation
+       uint8_t  latchIntEn     : 1;             //!< When 0 - INT pin emits a 50us long pulse, when 1 - INT pin is held high until the interrupt is cleared
+       uint8_t  intOpen        : 1;             //!< When 0 - INT pin is configured as push-pull, when 1 - INT pin is configured as open drain
+       uint8_t  intLevel       : 1;             //!< When 0 - logic level for the INT pin is active high, when 1 - logic level for the INT pin is active low
     } B;                                        //!< Interrupt configuration register bits
 } BSP_MPU9150_intConfigReg_U;
 
@@ -250,7 +250,9 @@ typedef struct BSP_MPU9150_config_STRUCT {
 typedef struct BSP_MPU9150_device_STRUCT {
     BSP_MPU9150_config_S    *config;        //!< Pointer to MPU9150 driver configuration
     nrf_drv_twi_t           *twiInstance;   //!< Pointer to TWI instance used
+    int16_t                 dataBuffer[7];
     bool isInitialized;                     //!< Is device initialized
+    volatile bool dataReady;                //!< Is new data ready flag
 
 } BSP_MPU9150_device_S;
 /***************************************************************************************************
@@ -264,20 +266,27 @@ typedef struct BSP_MPU9150_device_STRUCT {
 void BSP_MPU9150_init(BSP_MPU9150_device_S *inDevice,
         BSP_MPU9150_config_S *inConfig,
         BSP_MPU9150_err_E *outErr);
-
-void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
-        const uint8_t startRegAddr,
-        const uint8_t length,
-        uint8_t *data,
+void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
+        int16_t *newValues,
         BSP_MPU9150_err_E *outErr);
 
-int16_t BSP_MPU9150_calculateTemperature(const uint8_t *rawValue);
-void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
-        const uint8_t *rawValue,
-        int16_t *outGyro);
-void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
-        const uint8_t *rawValue,
-        int16_t *outAcc);
+//void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
+//        const uint8_t startRegAddr,
+//        const uint8_t length,
+//        uint8_t *data,
+//        BSP_MPU9150_err_E *outErr);
+//
+//void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, int16_t *outTemp);
+//void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
+//        const uint8_t *rawValue,
+//        int16_t *outGyro);
+//void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
+//        const uint8_t *rawValue,
+//        int16_t *outAcc);
+//void BSP_MPU9150_packDataToSend(const int16_t *gyroVals,
+//        const int16_t *accVals,
+//        const int16_t temp,
+//        int16_t *outBuffer);
 
 void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context);
 

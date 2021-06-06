@@ -36,7 +36,8 @@
 //! MPU-9150 device assignment structure
 BSP_MPU9150_device_S mpuDevice = {
         .twiInstance = &instanceTwi1,
-        .isInitialized = false
+        .isInitialized = false,
+        .dataReady = false
 };
 
 //! MPU-9150 configuration structure
