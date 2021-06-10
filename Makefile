@@ -45,6 +45,7 @@ SRC_FILES += \
   $(SDK_DIR)/components/drivers_nrf/common/nrf_drv_common.c \
   $(SDK_DIR)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
   $(SDK_DIR)/components/drivers_nrf/twi_master/nrf_drv_twi.c \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated/twi_hw_master.c \
   $(SDK_DIR)/components/toolchain/gcc/gcc_startup_nrf51.S \
   $(SDK_DIR)/components/toolchain/system_nrf51.c \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
@@ -81,6 +82,8 @@ INC_FOLDERS += \
   $(SDK_DIR)/components/toolchain/cmsis/include \
   $(SDK_DIR)/components/drivers_nrf/comp \
   $(SDK_DIR)/components/drivers_nrf/twi_master \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated/config \
   $(SDK_DIR)/components/ble/ble_services/ble_ancs_c \
   $(SDK_DIR)/components/ble/ble_services/ble_ias_c \
   $(SDK_DIR)/components/softdevice/s130/headers \

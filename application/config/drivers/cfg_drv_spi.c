@@ -49,8 +49,8 @@ DRV_SPI_config_S configSpi0 = {
 
 //! SPI 0 instance assignment structure
 DRV_SPI_instance_S instanceSpi0 = {
-        .spiStruct          = NRF_SPI0,             //!< SPI peripheral registers
-        .irq                = SPI0_TWI0_IRQn,       //!< SPI instance IRQ number
+        .spiStruct          = NRF_SPI0,             // SPI peripheral registers
+        .irq                = SPI0_TWI0_IRQn,       // SPI instance IRQ number
         .isInitialized      = false
 };
 

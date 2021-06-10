@@ -27,6 +27,7 @@
 #include "bsp_mpu9150.h"
 #include "nrf_delay.h"
 #include "nrf_drv_twi.h"
+#include "twi_master.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -73,8 +74,6 @@ static volatile bool twi_rx_done = false;
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
-__INLINE static void BSP_MPU9150_waitRxTransferFinish(BSP_MPU9150_err_E *outErr);
-__INLINE static void BSP_MPU9150_waitTxTransferFinish(BSP_MPU9150_err_E *outErr);
 __INLINE static void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, int16_t *outTemp);
 __INLINE static void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
         const uint8_t *rawValue,
@@ -92,7 +91,7 @@ static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
         const uint8_t regData,
         BSP_MPU9150_err_E *outErr);
 static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
-        const uint8_t regAddr,
+        uint8_t regAddr,
         uint8_t *data,
         BSP_MPU9150_err_E *outErr);
 static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
@@ -148,12 +147,6 @@ void BSP_MPU9150_init(BSP_MPU9150_device_S *inDevice,
             nrf_delay_ms(1u);
         }
 
-        // verify device ID by reading register value
-        BSP_MPU9150_readSingleReg(inDevice,
-                BSP_MPU9150_REG_WHO_AM_I,
-                &deviceId,
-                &err);
-
         if(err == BSP_MPU9150_err_NONE) {
             if(deviceId != BSP_MPU9150_DEVICE_ID_VALUE) {
                 // device ID value read is not correct
@@ -165,7 +158,6 @@ void BSP_MPU9150_init(BSP_MPU9150_device_S *inDevice,
         if(err == BSP_MPU9150_err_NONE) {
             BSP_MPU9150_configuration(inDevice, &err);
         }
-        // TODO: check if this is needed at all
         nrf_delay_ms(50u);
 
         if(err == BSP_MPU9150_err_NONE) {
@@ -199,7 +191,6 @@ void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
     int16_t gyroVals[6];
     int16_t temp = 0;
 
-    // has critical sections inside
     BSP_MPU9150_readMultiReg(inDevice,
             BSP_MPU9150_REG_ACCEL_XOUT_H,
             BSP_MPU9150_READ_DATA_SIZE_IN_BYTES,
@@ -221,20 +212,26 @@ void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
 
 void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context) {
 
+    BSP_MPU9150_device_S *inDevice = (BSP_MPU9150_device_S *) p_context;
+
     switch(p_event->type) {
         case NRF_DRV_TWI_EVT_DONE:
             switch(p_event->xfer_desc.type) {
                 case NRF_DRV_TWI_XFER_TX:
+                    inDevice->twiTxDone = true;
                     twi_tx_done = true;
                     break;
                 case NRF_DRV_TWI_XFER_TXTX:
                     twi_tx_done = true;
+                    inDevice->twiTxDone = true;
                     break;
                 case NRF_DRV_TWI_XFER_RX:
                     twi_rx_done = true;
+                    inDevice->twiRxDone = true;
                     break;
                 case NRF_DRV_TWI_XFER_TXRX:
                     twi_rx_done = true;
+                    inDevice->twiRxDone = true;
                     break;
                 default:
                     break;
@@ -264,17 +261,20 @@ void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_c
  * @date    15.05.2021
  **************************************************************************************************/
 static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
-        const uint8_t regAddr,
+        uint8_t regAddr,
         const uint8_t regData,
         BSP_MPU9150_err_E *outErr) {
 
-    uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
     volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
 
     // assemble I2C data - 1 byte register address, 1 byte data
     uint8_t msg[BSP_MPU9150_SINGLE_REG_MSG_SIZE] = { regAddr, regData };
 
+#if (DEPRECATED_TWI == false)
     err_code = nrf_drv_twi_tx(inDevice->twiInstance,
             inDevice->config->mpuAddress,
             &msg[0],
@@ -295,6 +295,10 @@ static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
 
     twi_tx_done = false;
 
+#else
+    twi_master_transfer((inDevice->config->mpuAddress << 1u) | 0u, &msg[0], 2u, false);
+#endif // (DEPRECATED_TWI == false)
+
     if(outErr != NULL) {
         *outErr = err;
     }
@@ -312,14 +316,17 @@ static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
  * @date    15.05.2021
  **************************************************************************************************/
 static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
-        const uint8_t regAddr,
+        uint8_t regAddr,
         uint8_t *data,
         BSP_MPU9150_err_E *outErr) {
 
-    uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
     volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
 
+#if (DEPRECATED_TWI == false)
     // after first START condition send |SLAVE_ADDR+W|REG_ADDR|
     err_code = nrf_drv_twi_tx(inDevice->twiInstance,
             inDevice->config->mpuAddress,
@@ -360,6 +367,14 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
     }
     twi_rx_done = false;
 
+#else
+    // TX first the reg address with write bit
+    twi_master_transfer((inDevice->config->mpuAddress << 1u) | 0u, &regAddr, 1u, false);
+
+    // RX data from register (single - 1 byte)
+    twi_master_transfer((inDevice->config->mpuAddress << 1u) | 1u, data, 1u, false);
+#endif // (DEPRECATED_TWI == false)
+
     if(outErr != NULL) {
         *outErr = err;
     }
@@ -378,15 +393,18 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
  * @date    15.05.2021
  **************************************************************************************************/
 static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
-        const uint8_t startRegAddr,
+        uint8_t startRegAddr,
         const uint8_t length,
         uint8_t *data,
         BSP_MPU9150_err_E *outErr) {
 
-    uint32_t err_code;
     BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
     volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
 
+#if (DEPRECATED_TWI == false)
     // after first START condition send |SLAVE_ADDR+W|START_REG_ADDR|
     err_code = nrf_drv_twi_tx(inDevice->twiInstance,
             inDevice->config->mpuAddress,
@@ -400,12 +418,12 @@ static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
 
     // TODO: add proper timeout check with timer
     // wait for transfer finish or timeout
-    while((!twi_tx_done) && --timeout);
+    while((!inDevice->twiTxDone) && --timeout);
 
     if(!timeout) {
         err = BSP_MPU9150_err_I2C_TIMEOUT;
     }
-    twi_tx_done = false;
+    inDevice->twiTxDone = false;
 
     // after second START condition read in data from registers
     err_code = nrf_drv_twi_rx(inDevice->twiInstance,
@@ -420,12 +438,22 @@ static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
     // TODO: add proper timeout check with timer
     // wait for transfer finish or timeout
     timeout = BSP_MPU9150_TWI_TIMEOUT;
-    while((!twi_rx_done) && --timeout);
+    while((!inDevice->twiRxDone) && --timeout);
 
     if(!timeout) {
         err = BSP_MPU9150_err_I2C_TIMEOUT;
     }
-    twi_rx_done = false;
+    inDevice->twiRxDone = false;
+
+#else
+    // TX first the register address with write bit
+    err = twi_master_transfer((inDevice->config->mpuAddress << 1u) | 0u, &startRegAddr, 1u, false);
+
+    // RX data from register
+    err &= twi_master_transfer((inDevice->config->mpuAddress << 1u) | 1u, data, length, true);
+
+    err = 1 ? 0 : err;
+#endif
 
     if(outErr != NULL) {
         *outErr = err;
@@ -445,11 +473,9 @@ __INLINE static void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, i
 
     int16_t retVal = 0;
 
-    if((rawValue != NULL) && (outTemp != NULL)) {
-        retVal = rawValue[1] + (rawValue[0] << 8u);
-        retVal = retVal / BSP_MPU9150_TEMP_CONVERSION_CONST_1 + BSP_MPU9150_TEMP_CONVERSION_CONST_2;
-        *outTemp = retVal;
-    }
+    retVal = rawValue[1] + (rawValue[0] << 8u);
+    retVal = retVal / BSP_MPU9150_TEMP_CONVERSION_CONST_1 + BSP_MPU9150_TEMP_CONVERSION_CONST_2;
+    *outTemp = retVal;
 }
 
 /***********************************************************************************************//**
@@ -474,48 +500,47 @@ __INLINE static void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S 
     float floatGyroY = 0.f;
     float floatGyroZ = 0.f;
 
-    if((inDevice != NULL) && (rawValue != NULL) && (outGyro != NULL)) {
-        gyroX = rawValue[1] + (rawValue[0] << 8u);
-        gyroY = rawValue[3] + (rawValue[2] << 8u);
-        gyroZ = rawValue[5] + (rawValue[4] << 8u);
+    gyroX = rawValue[1] + (rawValue[0] << 8u);
+    gyroY = rawValue[3] + (rawValue[2] << 8u);
+    gyroZ = rawValue[5] + (rawValue[4] << 8u);
 
-        // this will give the real (interpreted) value in degree/seconds
-        switch(inDevice->config->gyroRange) {
-            default:
-            case BSP_MPU9150_gyroFsRange_250degS:
-                floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
-                floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
-                floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
-                break;
-            case BSP_MPU9150_gyroFsRange_500degS:
-                floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
-                floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
-                floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
-                break;
-            case BSP_MPU9150_gyroFsRange_1000degS:
-                floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
-                floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
-                floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
-                break;
-            case BSP_MPU9150_gyroFsRange_2000degS:
-                floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
-                floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
-                floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
-                break;
-        }
-
-        // output it as 16-bit values
-        gyroX = (int16_t) floatGyroX;
-        gyroY = (int16_t) floatGyroY;
-        gyroZ = (int16_t) floatGyroZ;
-
-        // X-axis Gyro
-        outGyro[0] = gyroX;
-        // Y-axis Gyro
-        outGyro[1] = gyroY;
-        // Z-axis Gyro
-        outGyro[2] = gyroZ;
+    // this will give the real (interpreted) value in degree/seconds
+    switch(inDevice->config->gyroRange) {
+        default:
+        case BSP_MPU9150_gyroFsRange_250degS:
+            floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
+            floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
+            floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_250DEG_CONST;
+            break;
+        case BSP_MPU9150_gyroFsRange_500degS:
+            floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
+            floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
+            floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_500DEG_CONST;
+            break;
+        case BSP_MPU9150_gyroFsRange_1000degS:
+            floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
+            floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
+            floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_1000DEG_CONST;
+            break;
+        case BSP_MPU9150_gyroFsRange_2000degS:
+            floatGyroX = ((float) gyroX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
+            floatGyroY = ((float) gyroY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
+            floatGyroZ = ((float) gyroZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_GYRO_RANGE_2000DEG_CONST;
+            break;
     }
+
+    // output it as 16-bit values
+    gyroX = (int16_t) floatGyroX;
+    gyroY = (int16_t) floatGyroY;
+    gyroZ = (int16_t) floatGyroZ;
+
+    // X-axis Gyro
+    outGyro[0] = gyroX;
+    // Y-axis Gyro
+    outGyro[1] = gyroY;
+    // Z-axis Gyro
+    outGyro[2] = gyroZ;
+
 }
 
 /***********************************************************************************************//**
@@ -540,48 +565,47 @@ __INLINE static void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *
     float floatAccY = 0.f;
     float floatAccZ = 0.f;
 
-    if((inDevice != NULL) && (rawValue != NULL) && (outAcc != NULL)) {
-        accX = rawValue[1] + (rawValue[0] << 8u);
-        accY = rawValue[3] + (rawValue[2] << 8u);
-        accZ = rawValue[5] + (rawValue[4] << 8u);
+    accX = rawValue[1] + (rawValue[0] << 8u);
+    accY = rawValue[3] + (rawValue[2] << 8u);
+    accZ = rawValue[5] + (rawValue[4] << 8u);
 
-        // this will give the real (interpreted) value in G
-        switch(inDevice->config->accRange) {
-            default:
-            case BSP_MPU9150_accFsRange_2G:
-                floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
-                floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
-                floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
-                break;
-            case BSP_MPU9150_accFsRange_4G:
-                floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
-                floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
-                floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
-                break;
-            case BSP_MPU9150_accFsRange_8G:
-                floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
-                floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
-                floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
-                break;
-            case BSP_MPU9150_accFsRange_16G:
-                floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
-                floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
-                floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
-                break;
-        }
-
-        // output values in mG, that way they can be stored as 16-bit
-        accX = (int16_t) (floatAccX * 1000);
-        accY = (int16_t) (floatAccY * 1000);
-        accZ = (int16_t) (floatAccZ * 1000);
-
-        // X-axis Accelerometer
-        outAcc[0] = accX;
-        // Y-axis Accelerometer
-        outAcc[1] = accY;
-        // Z-axis Accelerometer
-        outAcc[2] = accZ;
+    // this will give the real (interpreted) value in G
+    switch(inDevice->config->accRange) {
+        default:
+        case BSP_MPU9150_accFsRange_2G:
+            floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
+            floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
+            floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_2G_CONST;
+            break;
+        case BSP_MPU9150_accFsRange_4G:
+            floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
+            floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
+            floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_4G_CONST;
+            break;
+        case BSP_MPU9150_accFsRange_8G:
+            floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
+            floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
+            floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_8G_CONST;
+            break;
+        case BSP_MPU9150_accFsRange_16G:
+            floatAccX = ((float) accX / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
+            floatAccY = ((float) accY / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
+            floatAccZ = ((float) accZ / BSP_MPU9150_16_BIT_SIGNED_MAX_VAL_FLOAT) * BSP_MPU9150_ACC_RANGE_16G_CONST;
+            break;
     }
+
+    // output values in mG, that way they can be stored as 16-bit
+    accX = (int16_t) (floatAccX * 1000);
+    accY = (int16_t) (floatAccY * 1000);
+    accZ = (int16_t) (floatAccZ * 1000);
+
+    // X-axis Accelerometer
+    outAcc[0] = accX;
+    // Y-axis Accelerometer
+    outAcc[1] = accY;
+    // Z-axis Accelerometer
+    outAcc[2] = accZ;
+
 }
 
 /***********************************************************************************************//**
@@ -600,59 +624,15 @@ __INLINE static void BSP_MPU9150_packDataToSend(const int16_t *gyroVals,
         const int16_t temp,
         int16_t *outBuffer) {
 
-    if((gyroVals != NULL) && (accVals != NULL) && (outBuffer != NULL)) {
-        outBuffer[0] = gyroVals[0];
-        outBuffer[1] = gyroVals[1];
-        outBuffer[2] = gyroVals[2];
+    outBuffer[0] = gyroVals[0];
+    outBuffer[1] = gyroVals[1];
+    outBuffer[2] = gyroVals[2];
 
-        outBuffer[3] = accVals[0];
-        outBuffer[4] = accVals[1];
-        outBuffer[5] = accVals[2];
+    outBuffer[3] = accVals[0];
+    outBuffer[4] = accVals[1];
+    outBuffer[5] = accVals[2];
 
-        outBuffer[6] = temp;
-    }
-}
-
-/***********************************************************************************************//**
- * @brief Function waits (blocking) for I2C RX transfer finish or timeout.
- ***************************************************************************************************
- * @param [out] *outErr      - error parameter.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    15.05.2021
- **************************************************************************************************/
-__INLINE static void BSP_MPU9150_waitRxTransferFinish(BSP_MPU9150_err_E *outErr) {
-
-    uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
-
-    // TODO: add proper timeout check with timer
-    // wait for transfer finish or timeout
-    while((!twi_rx_done) && --timeout);
-
-    if(!timeout) {
-        *outErr = BSP_MPU9150_err_I2C_TIMEOUT;
-    }
-}
-
-/***********************************************************************************************//**
- * @brief Function waits (blocking) for I2C TX transfer finish or timeout.
- ***************************************************************************************************
- * @param [out] *outErr      - error parameter.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    15.05.2021
- **************************************************************************************************/
-__INLINE static void BSP_MPU9150_waitTxTransferFinish(BSP_MPU9150_err_E *outErr) {
-
-    uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
-
-    // TODO: add proper timeout check with timer
-    // wait for transfer finish or timeout
-    while((!twi_tx_done) && --timeout);
-
-    if(!timeout) {
-        *outErr = BSP_MPU9150_err_I2C_TIMEOUT;
-    }
+    outBuffer[6] = temp;
 }
 
 /***********************************************************************************************//**
@@ -679,7 +659,9 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
          * Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV), where Gyroscope Output Rate
          * can be either 8kHz when DLPF is disabled, or 1kHz when DLPF is enabled
          */
-        uint8_t samplingRateRegVal = 9u;
+
+        // worked with 199
+        uint8_t samplingRateRegVal = 19u;
         BSP_MPU9150_writeSingleReg(inDevice,
                 BSP_MPU9150_REG_SMPLRT_DIV,
                 samplingRateRegVal,
@@ -703,12 +685,12 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
          * FIFO enable register sets which sensor output will be written to FIFO buffer
          */
         if(err == BSP_MPU9150_err_NONE ) {
-//            fifoConfigReg.B.accelFifoEn = true;
-//            fifoConfigReg.B.tempFifoEn = true;
-//            fifoConfigReg.B.xgFifoEn = true;
-//            fifoConfigReg.B.ygFifoEn = true;
-//            fifoConfigReg.B.zgFifoEn = true;
-//
+            fifoConfigReg.B.accelFifoEn = false;
+            fifoConfigReg.B.tempFifoEn = false;
+            fifoConfigReg.B.xgFifoEn = false;
+            fifoConfigReg.B.ygFifoEn = false;
+            fifoConfigReg.B.zgFifoEn = false;
+
             BSP_MPU9150_writeSingleReg(inDevice,
                     BSP_MPU9150_REG_FIFO_EN,
                     fifoConfigReg.R,
@@ -724,7 +706,7 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
             intConfigReg.B.i2cBypassEn = false;
             intConfigReg.B.intLevel = false;
             intConfigReg.B.intOpen = false;
-            // clear interrupt status on any read operation
+            // if true - clear interrupt status on any read operation
             intConfigReg.B.intRdClear = true;
             intConfigReg.B.latchIntEn = false;
 
@@ -770,7 +752,7 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
         if(err == BSP_MPU9150_err_NONE ) {
             intEnableReg.B.i2cMstIntEn = false;
             intEnableReg.B.fifoOverflowEn = false;
-            // enable DATA READY interrupt signal on pin
+            // if true - enable DATA READY interrupt signal on pin
             intEnableReg.B.dataRdyEn = true;
 
             BSP_MPU9150_writeSingleReg(inDevice,

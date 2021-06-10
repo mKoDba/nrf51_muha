@@ -150,9 +150,6 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
         const BSP_ECG_ADS1192_reg_E inStartReg,
         const uint8_t *inData,
         BSP_ECG_ADS1192_err_E *outErr);
-static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
-        const BSP_ECG_ADS1192_reg_E inReg,
-        BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_enablePgaCalibration(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_setConversionRate(BSP_ECG_ADS1192_device_S *inDevice,
@@ -160,14 +157,13 @@ static void BSP_ECG_ADS1192_setConversionRate(BSP_ECG_ADS1192_device_S *inDevice
         BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_setNormalElectrodeRead(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
-static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
-        const uint16_t inSize,
-        uint8_t *outData,
-        BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
 #if (DEBUG == true)
 static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice,
+        BSP_ECG_ADS1192_err_E *outErr);
+static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
+        const BSP_ECG_ADS1192_reg_E inReg,
         BSP_ECG_ADS1192_err_E *outErr);
 static void BSP_ECG_ADS1192_readSupplyMeasurement(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
@@ -210,8 +206,10 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_initReset(inDevice, &ecgErr);
 
         if(ecgErr == BSP_ECG_ADS1192_err_NONE) {
-            /* on power-up device defaults to Read Data Continous mode,
-             * stop it to enable sending SPI commands */
+            /*
+             * on power-up device defaults to Read Data Continuous mode,
+             * stop it to enable sending SPI commands
+             */
             BSP_ECG_ADS1192_sendSpiCommand(inDevice, BSP_ECG_ADS1192_SPI_SDATAC, &ecgErr);
             // wait 4 * tCLK after sending SDATAC command
             nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
@@ -337,6 +335,43 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
+/***********************************************************************************************//**
+ * @brief Function for reading data shifted out of ADS1192.
+ ***************************************************************************************************
+ * @param [in]  *inDevice    - pointer to device structure for ECG driver.
+ * @param [in]  inSize       - length (in bytes) of data to be read.
+ * @param [out] *outData     - pointer to output buffer with converted signed 16 bits values.
+ * @param [out] *outErr      - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    01.11.2020
+ **************************************************************************************************/
+void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
+        const uint16_t inSize,
+        int16_t *outData,
+        BSP_ECG_ADS1192_err_E *outErr) {
+
+    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
+    uint8_t rxBuffer[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0u };
+
+    // TODO: might be good to add null check for inDevice and outData
+    DRV_SPI_masterRxBlocking(inDevice->config->spiInstance,
+            inSize,
+            &rxBuffer[0],
+            &spiErr);
+
+    if(spiErr != DRV_SPI_err_NONE) {
+        ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
+    } else {
+        BSP_ECG_ADS1192_convertSignalToSignedVal(&rxBuffer[0], outData);
+    }
+
+    if(outErr != NULL) {
+        *outErr = ecgErr;
+    }
+}
+
 /*******************************************************************************
  *                         PRIVATE FUNCTION DEFINITIONS
  **************************************************************************************************/
@@ -345,9 +380,8 @@ void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
  * @details Converts 8-bit output signal array into correct 16-bit
  *          twos-complement values (amplitudes).
  ***************************************************************************************************
- * @param [in]  *inData    - pointer to input data array.
- * @param [in]  inDataSize - input data array size.
- * @param [out] *outData   - pointer to output data array.
+ * @param [in]  *inData    - pointer to input unsigned byte data array.
+ * @param [out] *outData   - pointer to output signed 16 bit data array.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    05.12.2020
@@ -359,7 +393,6 @@ static __INLINE void BSP_ECG_ADS1192_convertSignalToSignedVal(const uint8_t *inD
     outData[1] = inData[2] | (inData[1] << BSP_ECG_ADS1192_BYTE_SHIFT);
     outData[2] = inData[3] | (inData[2] << BSP_ECG_ADS1192_BYTE_SHIFT);
 
-//    SEGGER_RTT_printf(0, ",%d,%d,%d\n", outData[0], outData[1], outData[2]);
 }
 
 /***********************************************************************************************//**
@@ -445,61 +478,6 @@ static void BSP_ECG_ADS1192_writeSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
     if(outErr != NULL) {
         *outErr = ecgErr;
     }
-}
-
-/***********************************************************************************************//**
- * @brief Function for reading from single register of ADS1192.
- ***************************************************************************************************
- * @param [in]  *inDevice    - pointer to device structure for ECG driver.
- * @param [in]  inReg        - register address to read from.
- * @param [out] *outErr      - error parameter.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    21.10.2020
- **************************************************************************************************/
-static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
-        const BSP_ECG_ADS1192_reg_E inReg,
-        BSP_ECG_ADS1192_err_E *outErr) {
-
-    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
-    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-    uint8_t opcode[BSP_ECG_ADS1192_SPI_SIZE_READ] = { 0u };
-    uint8_t outData[BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET];
-    uint8_t rxTxBufferSize = BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET;
-    uint8_t regAddr = ecgADS1192RegAddr[inReg];
-    uint8_t retVal = 0xFFu;
-
-    if(inDevice != NULL) {
-        /* byte format for Read opcode: | 001R RRRR | 000N NNNN |
-         * RRRR - regAddr, NNNN - number of registers to read */
-        opcode[0] = BSP_ECG_ADS1192_SPI_READ_CMD | regAddr;
-        opcode[1] = BSP_ECG_ADS1192_SPI_SINGLE_REG;
-
-        // start SPI transfer
-        DRV_SPI_masterTxRxBlocking(inDevice->config->spiInstance,
-                &opcode[0],
-                rxTxBufferSize,
-                &outData[0],
-                &spiErr);
-        // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
-        nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
-
-        if(spiErr != DRV_SPI_err_NONE) {
-            ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
-        } else {
-            // return register value
-            retVal = outData[BSP_ECG_ADS1192_SPI_REG_VALUE_INDEX];
-        }
-    } else {
-        ecgErr = BSP_ECG_ADS1192_err_NULL_PARAM;
-    }
-
-    if(outErr != NULL) {
-        *outErr = ecgErr;
-    }
-
-    return retVal;
-
 }
 
 /***********************************************************************************************//**
@@ -608,45 +586,6 @@ static void BSP_ECG_ADS1192_setNormalElectrodeRead(BSP_ECG_ADS1192_device_S *inD
 }
 
 /***********************************************************************************************//**
- * @brief Function for reading data shifted out of ADS1192.
- ***************************************************************************************************
- * @param [in]  *inDevice    - pointer to device structure for ECG driver.
- * @param [in]  inSize       - length (in bytes) of data to be read.
- * @param [out] *outData     - pointer to data to be read.
- * @param [out] *outErr      - error parameter.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    01.11.2020
- **************************************************************************************************/
-static void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
-        const uint16_t inSize,
-        uint8_t *outData,
-        BSP_ECG_ADS1192_err_E *outErr) {
-
-    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
-    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-
-    if((inDevice != NULL) && (outData != NULL)) {
-        DRV_SPI_masterRxBlocking(inDevice->config->spiInstance,
-                inSize,
-                &outData[0],
-                &spiErr);
-        // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
-        nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
-
-        if(spiErr != DRV_SPI_err_NONE) {
-            ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
-        }
-    } else {
-        ecgErr = BSP_ECG_ADS1192_err_NULL_PARAM;
-    }
-
-    if(outErr != NULL) {
-        *outErr = ecgErr;
-    }
-}
-
-/***********************************************************************************************//**
  * @brief Sends reset impulse on device initialization and resets registers.
  ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
@@ -686,43 +625,44 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-/***********************************************************************************************//**
- * @brief Starts reading and outputting data received from channel inputs.
- ***************************************************************************************************
- * @param [in]  pin    - GPIOTE pin number.
- * @param [in]  action - GPIOTE trigger action.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    13.12.2020
- **************************************************************************************************/
-void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-
-    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-    uint8_t bytes[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0 };
-    // converted 16-bits data
-    int16_t outData[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME/2] = { 0 };
-
-    // get data bytes from ADS1192
-    DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
-    // convert data to correct format
-    BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
-
-    // fill buffer
-    if(ecgDevice.changeBuffer == true) {
-        ecgDevice.buffer2[ecgDevice.sampleIndex] = outData[2];
-    } else {
-        ecgDevice.buffer1[ecgDevice.sampleIndex] = outData[2];
-    }
-
-    ecgDevice.sampleIndex++;
-
-    // with BLE notification, only 20 user data bytes is allowed on nRF51422
-    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
-        ecgDevice.bufferFull = true;
-        ecgDevice.sampleIndex = 0u;
-        ecgDevice.changeBuffer ^= 1u;
-    }
-}
+// TODO: remove this - not needed at all anymore (handled in application)
+///***********************************************************************************************//**
+// * @brief Starts reading and outputting data received from channel inputs.
+// ***************************************************************************************************
+// * @param [in]  pin    - GPIOTE pin number.
+// * @param [in]  action - GPIOTE trigger action.
+// ***************************************************************************************************
+// * @author  mario.kodba
+// * @date    13.12.2020
+// **************************************************************************************************/
+//void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+//
+//    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
+//    uint8_t bytes[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0 };
+//    // converted 16-bits data
+//    int16_t outData[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME/2] = { 0 };
+//
+//    // get data bytes from ADS1192
+//    DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
+//    // convert data to correct format
+//    BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
+//
+//    // fill buffer
+//    if(ecgDevice.changeBuffer == true) {
+//        ecgDevice.buffer2[ecgDevice.sampleIndex] = outData[2];
+//    } else {
+//        ecgDevice.buffer1[ecgDevice.sampleIndex] = outData[2];
+//    }
+//
+//    ecgDevice.sampleIndex++;
+//
+//    // with BLE notification, only 20 user data bytes is allowed on nRF51422
+//    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
+//        ecgDevice.bufferFull = true;
+//        ecgDevice.sampleIndex = 0u;
+//        ecgDevice.changeBuffer ^= 1u;
+//    }
+//}
 
 #if (DEBUG == true)
 /***********************************************************************************************//**
@@ -792,6 +732,61 @@ static void BSP_ECG_ADS1192_updateTemperature(BSP_ECG_ADS1192_device_S *inDevice
     if(outErr != NULL) {
         *outErr = ecgErr;
     }
+}
+
+/***********************************************************************************************//**
+ * @brief Function for reading from single register of ADS1192.
+ ***************************************************************************************************
+ * @param [in]  *inDevice    - pointer to device structure for ECG driver.
+ * @param [in]  inReg        - register address to read from.
+ * @param [out] *outErr      - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    21.10.2020
+ **************************************************************************************************/
+static uint8_t BSP_ECG_ADS1192_readSingleReg(BSP_ECG_ADS1192_device_S *inDevice,
+        const BSP_ECG_ADS1192_reg_E inReg,
+        BSP_ECG_ADS1192_err_E *outErr) {
+
+    BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
+    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
+    uint8_t opcode[BSP_ECG_ADS1192_SPI_SIZE_READ] = { 0u };
+    uint8_t outData[BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET];
+    uint8_t rxTxBufferSize = BSP_ECG_ADS1192_SPI_SIZE_READ + BSP_ECG_ADS1192_SPI_READ_OFFSET;
+    uint8_t regAddr = ecgADS1192RegAddr[inReg];
+    uint8_t retVal = 0xFFu;
+
+    if(inDevice != NULL) {
+        /* byte format for Read opcode: | 001R RRRR | 000N NNNN |
+         * RRRR - regAddr, NNNN - number of registers to read */
+        opcode[0] = BSP_ECG_ADS1192_SPI_READ_CMD | regAddr;
+        opcode[1] = BSP_ECG_ADS1192_SPI_SINGLE_REG;
+
+        // start SPI transfer
+        DRV_SPI_masterTxRxBlocking(inDevice->config->spiInstance,
+                &opcode[0],
+                rxTxBufferSize,
+                &outData[0],
+                &spiErr);
+        // TODO: [mario.kodba 1.12.2020.] check this delay and value, seems to work correctly with it
+        nrf_delay_us(BSP_ECG_ADS1192_WAIT_TIME_8_US);
+
+        if(spiErr != DRV_SPI_err_NONE) {
+            ecgErr = BSP_ECG_ADS1192_err_SPI_READ_WRITE;
+        } else {
+            // return register value
+            retVal = outData[BSP_ECG_ADS1192_SPI_REG_VALUE_INDEX];
+        }
+    } else {
+        ecgErr = BSP_ECG_ADS1192_err_NULL_PARAM;
+    }
+
+    if(outErr != NULL) {
+        *outErr = ecgErr;
+    }
+
+    return retVal;
+
 }
 
 /***********************************************************************************************//**

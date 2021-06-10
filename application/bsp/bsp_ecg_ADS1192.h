@@ -164,6 +164,7 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
     float analogVddSupply;                      //!< Analog VDD supply
 #endif // #if (DEBUG == true)
     bool isInitialized;                         //!< Is device initialized
+    volatile bool dataReady;                    //!< Is data ready flag
     volatile bool bufferFull;                   //!< Is device data buffer filled
     volatile bool changeBuffer;
 } BSP_ECG_ADS1192_device_S;
@@ -181,6 +182,10 @@ void BSP_ECG_ADS1192_init(BSP_ECG_ADS1192_device_S *inDevice,
 void BSP_ECG_ADS1192_startEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
 void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
+        BSP_ECG_ADS1192_err_E *outErr);
+void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
+        const uint16_t inSize,
+        int16_t *outData,
         BSP_ECG_ADS1192_err_E *outErr);
 void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 

@@ -25,6 +25,7 @@
 #include "sdk_common.h"
 #include "ble_srv_common.h"
 #include "ble_ecgs.h"
+#include "ble_muha.h"
 #include "bsp_ecg_ADS1192.h"
 #include "nrf51_muha.h"
 #include "SEGGER_RTT.h"
@@ -33,6 +34,7 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
+#define BLE_ECGS_ON_WRITE_NOTIFICATION_BYTE_SIZE        (2u)    //!< Number of bytes received in CCCD handle write event for notification.
 
 /***************************************************************************************************
  *                          GLOBAL VARIABLES
@@ -42,23 +44,23 @@
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
  **************************************************************************************************/
-static void BLE_ECGS_customValueCharAdd(BLE_ECGS_custom_S *customService,
+static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
         ERR_E *err);
 static void BLE_ECGS_mpuDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
         ERR_E *err);
 static void BLE_ECGS_onConnect(BLE_ECGS_custom_S *customService, ble_evt_t const *p_ble_evt);
-static void BLE_ECGS_onWrite(BLE_ECGS_custom_S *customService, ble_evt_t const *p_ble_evt);
+static void BLE_ECGS_onWrite(BLE_ECGS_custom_S *customService, ble_evt_t *p_ble_evt);
 static void BLE_ECGS_onDisconnect(BLE_ECGS_custom_S *customService, ble_evt_t const *p_ble_evt);
 
 /***************************************************************************************************
  *                          PUBLIC FUNCTION DEFINITIONS
  **************************************************************************************************/
 /***********************************************************************************************//**
- * @brief Function initializes custom BLE service, meant for ECG ADC data.
+ * @brief Function initializes custom BLE service, along with its custom characteristics.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
+ * @param [in]  customService   - Pointer to custom service structure.
  * @param [in]  customInit      - Pointer to custom service initialization structure.
  * @param [out] err             - Pointer to error parameter.
  ***************************************************************************************************
@@ -98,7 +100,7 @@ void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S
 
         if(localErr == ERR_NONE) {
             // add ECG data characteristics
-            BLE_ECGS_customValueCharAdd(customService, customInit, &localErr);
+            BLE_ECGS_ecgDataCharAdd(customService, customInit, &localErr);
         }
 
         if(localErr == ERR_NONE) {
@@ -115,15 +117,15 @@ void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S
 }
 
 /***********************************************************************************************//**
- * @brief Function initializes custom BLE service, meant for ECG ADC data.
+ * @brief Callback function for custom service on BLE event.
  ***************************************************************************************************
- * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack. (Nordic)
+ * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack.
  * @param [in]  context         - Pointer to custom ECG service structure.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-void BLE_ECGS_onBleEvt(const ble_evt_t *ble_evt, void *context) {
+void BLE_ECGS_onBleEvt(ble_evt_t *ble_evt, void *context) {
 
     BLE_ECGS_custom_S *customService = (BLE_ECGS_custom_S *) context;
 
@@ -141,6 +143,11 @@ void BLE_ECGS_onBleEvt(const ble_evt_t *ble_evt, void *context) {
                 BLE_ECGS_onWrite(customService, ble_evt);
                 break;
 
+            case BLE_EVT_TX_COMPLETE:
+                // should set free at least one TX buffer
+                muhaBleTxBufferAvailable = true;
+                break;
+
             default:
                 break;
         }
@@ -151,119 +158,84 @@ void BLE_ECGS_onBleEvt(const ble_evt_t *ble_evt, void *context) {
  * @brief Function for update custom BLE characteristic, meant for ECG ADC data.
  ***************************************************************************************************
  * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  customValue     - Pointer to array of data to be written to characteristic.
- * @param [out] err             - Pointer to error parameter.
+ * @param [in]  ecgData         - Pointer to array of data to be written to characteristic.
+ * @return NRF error code.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-void BLE_ECGS_customValueUpdate(BLE_ECGS_custom_S *customService, uint8_t *customValue, ERR_E *err) {
+uint32_t BLE_ECGS_ecgDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *ecgData) {
 
-    ERR_E localErr;
     uint32_t err_code = NRF_SUCCESS;
-    ble_gatts_value_t gatts_value;
+    uint16_t len = NRF51_MUHA_ADS1192_BLE_BYTE_SIZE;
+    ble_gatts_hvx_params_t hvx_params;
 
-    // sending 16 bits of data
-    gatts_value.len     = NRF51_MUHA_ADS1192_BLE_BYTE_SIZE;
-    gatts_value.offset  = 0u;
-    gatts_value.p_value = customValue;
-
-//    // update database.
-//    err_code = sd_ble_gatts_value_set(customService->conn_handle,
-//            customService->custom_value_handles.value_handle,
-//            &gatts_value);
-//
-//    if(err_code != NRF_SUCCESS) {
-//        localErr = ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL;
-//    }
-
-    // send value if connected and notifying.
-    if((customService->conn_handle != BLE_CONN_HANDLE_INVALID)) {
-        ble_gatts_hvx_params_t hvx_params;
+    // send value if connected and peer enabled notifications for ECG characteristic
+    if((customService->conn_handle != BLE_CONN_HANDLE_INVALID) &&
+            (muhaEcgNotificationEnabled == true)) {
 
         hvx_params.handle = customService->custom_value_handles.value_handle;
         hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
-        hvx_params.offset = gatts_value.offset;
-        hvx_params.p_len  = &gatts_value.len;
-        hvx_params.p_data = gatts_value.p_value;
+        hvx_params.offset = 0u;
+        hvx_params.p_len  = &len;
+        hvx_params.p_data = ecgData;
 
         err_code = sd_ble_gatts_hvx(customService->conn_handle, &hvx_params);
     } else {
         err_code = NRF_ERROR_INVALID_STATE;
     }
 
-    if(err_code != NRF_SUCCESS) {
-        localErr = ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL;
-    }
-
-    if(err != NULL) {
-        *err = localErr;
-    }
+    return err_code;
 }
 
 /***********************************************************************************************//**
- * @brief Function for update custom BLE characteristic, meant for ECG ADC data.
+ * @brief Function for update custom BLE characteristic, meant for MPU sensor data.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
+ * @param [in]  customService   - Pointer to custom custom service structure.
  * @param [in]  mpuData         - Pointer to array of data to be written to characteristic.
- * @param [out] err             - Pointer to error parameter.
+ * @return NRF error code.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-void BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuData, ERR_E *err) {
+uint32_t BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuData) {
 
-    ERR_E localErr;
-    uint32_t err_code = NRF_SUCCESS;
-    ble_gatts_value_t gatts_value;
     ble_gatts_hvx_params_t hvx_params;
+    uint32_t err_code = NRF_SUCCESS;
+    uint16_t len = NRF51_MUHA_MPU9150_BLE_BYTE_SIZE;
 
-    gatts_value.len     = NRF51_MUHA_MPU9150_BLE_BYTE_SIZE;
-    gatts_value.offset  = 0u;
-    gatts_value.p_value = mpuData;
-
-    // send value if connected and notifying.
-    if((customService->conn_handle != BLE_CONN_HANDLE_INVALID)) {
+    // send value if connected and peer enabled notifications for MPU characteristic
+    if((customService->conn_handle != BLE_CONN_HANDLE_INVALID) &&
+            (muhaMpuNotificationEnabled == true)) {
 
         hvx_params.handle = customService->mpu_handles.value_handle;
         hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
-        hvx_params.offset = gatts_value.offset;
-        hvx_params.p_len  = &gatts_value.len;
-        hvx_params.p_data = gatts_value.p_value;
+        hvx_params.offset = 0u;
+        hvx_params.p_len  = &len;
+        hvx_params.p_data = mpuData;
 
         err_code = sd_ble_gatts_hvx(customService->conn_handle, &hvx_params);
     } else {
         err_code = NRF_ERROR_INVALID_STATE;
     }
 
-    if(err_code == BLE_ERROR_GATTS_SYS_ATTR_MISSING) {
-        err_code = sd_ble_gatts_sys_attr_set(customService->conn_handle, NULL, 0, 0);
-    }
-
-    if(err_code != NRF_SUCCESS) {
-//        SEGGER_RTT_printf(0u, "err_code on update: %x\n", err_code);
-        localErr = ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL;
-    }
-
-    if(err != NULL) {
-        *err = localErr;
-    }
+    return err_code;
 }
 
 /***************************************************************************************************
  *                         PRIVATE FUNCTION DEFINITIONS
  **************************************************************************************************/
 /***********************************************************************************************//**
- * @brief Function for adding the ECG Custom Value characteristic.
+ * @brief Function for adding the ECG data characteristic.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  customInit      - Pointer to initialization ECG service structure.
+ * @param [in]  customService   - Pointer to custom custom service structure.
+ * @param [in]  customInit      - Pointer to initialization custom service structure.
  * @param [out] err             - Pointer to error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-static void BLE_ECGS_customValueCharAdd(BLE_ECGS_custom_S *customService,
+static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
         ERR_E *err) {
 
@@ -333,10 +305,10 @@ static void BLE_ECGS_customValueCharAdd(BLE_ECGS_custom_S *customService,
 }
 
 /***********************************************************************************************//**
- * @brief Function for adding the ECG Custom Value characteristic.
+ * @brief Function for adding the ECG MPU data characteristic.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  customInit      - Pointer to initialization ECG service structure.
+ * @param [in]  customService   - Pointer to custom custom service structure.
+ * @param [in]  customInit      - Pointer to initialization custom service structure.
  * @param [out] err             - Pointer to error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
@@ -409,52 +381,90 @@ static void BLE_ECGS_mpuDataCharAdd(BLE_ECGS_custom_S *customService,
 }
 
 /***********************************************************************************************//**
- * @brief Function for handling the Connect event.
+ * @brief Function for handling the BLE Connect event.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  bleEvt          - Pointer to BLE event received from BLE stack. (Nordic)
+ * @param [in]  customService   - Pointer to custom service structure.
+ * @param [in]  bleEvt          - Pointer to BLE event received from BLE stack.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
 static void BLE_ECGS_onConnect(BLE_ECGS_custom_S *customService, const ble_evt_t *ble_evt) {
 
-    customService->conn_handle = ble_evt->evt.gap_evt.conn_handle;
-
     BLE_ECGS_evt_S evt;
 
+    customService->conn_handle = ble_evt->evt.gap_evt.conn_handle;
     evt.evt_type = BLE_ECGS_EVT_CONNECTED;
 
     customService->evt_handler(customService, &evt);
 }
 
 /***********************************************************************************************//**
- * @brief Function for handling the Disconnect event.
+ * @brief Function for handling the BLE Disconnect event.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack. (Nordic)
+ * @param [in]  customService   - Pointer to custom service structure.
+ * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
 static void BLE_ECGS_onDisconnect(BLE_ECGS_custom_S *customService, const ble_evt_t *ble_evt) {
 
-    (void) ble_evt;
+    BLE_ECGS_evt_S evt;
+
     customService->conn_handle = BLE_CONN_HANDLE_INVALID;
+    evt.evt_type = BLE_ECGS_EVT_DISCONNECTED;
+
+    customService->evt_handler(customService, &evt);
 }
 
 /***********************************************************************************************//**
- * @brief Function for handling the Write event.
+ * @brief Function for handling the BLE Write event.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack. (Nordic)
+ * @param [in]  customService   - Pointer to custom service structure.
+ * @param [in]  ble_evt         - Pointer to BLE event received from BLE stack.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    13.05.2021.
  **************************************************************************************************/
-static void BLE_ECGS_onWrite(BLE_ECGS_custom_S *customService, const ble_evt_t *ble_evt) {
+static void BLE_ECGS_onWrite(BLE_ECGS_custom_S *customService, ble_evt_t *ble_evt) {
 
+    ble_gatts_evt_write_t *p_evt_write = &ble_evt->evt.gatts_evt.params.write;
 
+    // if it has been written to MPU CCCD characteristic handle
+    if(p_evt_write->handle == customService->mpu_handles.cccd_handle){
+        if(p_evt_write->len == BLE_ECGS_ON_WRITE_NOTIFICATION_BYTE_SIZE) {
+            // CCCD written, update notification state
+            BLE_ECGS_evt_S evt;
+            bool isNotificationEnabled = (p_evt_write->data[0] & BLE_GATT_HVX_NOTIFICATION);
+
+            if(isNotificationEnabled == true) {
+                evt.evt_type = BLE_ECGS_EVT_MPU_NOTIFICATION_ENABLED;
+            } else {
+                evt.evt_type = BLE_ECGS_EVT_MPU_NOTIFICATION_DISABLED;
+            }
+
+            customService->evt_handler(customService, &evt);
+        }
+    }
+    // if it has been written to ECG CCCD characteristic handle
+    else if(p_evt_write->handle == customService->custom_value_handles.cccd_handle) {
+        if(p_evt_write->len == BLE_ECGS_ON_WRITE_NOTIFICATION_BYTE_SIZE) {
+            // CCCD written, update notification state
+            BLE_ECGS_evt_S evt;
+            bool isNotificationEnabled = (p_evt_write->data[0] & BLE_GATT_HVX_NOTIFICATION);
+
+            if(isNotificationEnabled == true) {
+                evt.evt_type = BLE_ECGS_EVT_ECG_NOTIFICATION_ENABLED;
+            } else {
+                evt.evt_type = BLE_ECGS_EVT_ECG_NOTIFICATION_DISABLED;
+            }
+
+            customService->evt_handler(customService, &evt);
+        }
+    } else {
+        ;
+    }
 }
 
 /***************************************************************************************************

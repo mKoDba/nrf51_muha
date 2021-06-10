@@ -15,27 +15,27 @@
  ***************************************************************************************************
  * @file    main.c
  * @author  mario.kodba
- * @brief   Main of MUHA board application source file.
+ * @brief   Main of "MUHA" board application source file.
  **************************************************************************************************/
 
 /***********************************************************************************************//**
-* @mainpage NRF51 MUHA board - Master's project
+* @mainpage Software for nRF51 "MUHA" board - Master's project
 ****************************************************************************************************
 * Introduction
 * ------------
 *
-* This user manual describes software architecture of NRF51 MUHA board and its functionality.
+* This user manual describes software architecture of nRF51 MUHA board and its functionality.
 * It was specifically made as part of Master's project on Faculty of Electrical Engineering and
 * Computing at University of Zagreb.
 *
 * Folder structure is divided into a number of subfolders, each representing specific layers
 * of functionality.
-* - Application
-*    * BSP (board support package)
-*    * Config (configuration files)
-*    * Drivers (NRF51 peripheral drivers)
-*    * HAL (Hardware abstraction layer)
-* - SDK_components (Nordic SDK)
+* - application
+*    * bsp (board support package)
+*    * config (configuration files)
+*    * (non Nordic) drivers (nRF51 peripheral drivers)
+*    * (non Nordic) HAL (Hardware abstraction layer)
+* - SDK (Nordic SDK)
 * - SEGGER_RTT (Segger's library)
 *
 *
@@ -70,10 +70,6 @@ int main(void) {
 
     if(error == ERR_NONE) {
         NRF51_MUHA_start(&error);
-    }
-
-    while(1) {
-        ;
     }
 
     // should not get to here

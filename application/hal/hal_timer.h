@@ -46,15 +46,15 @@ void HAL_TIMER_setBitWidth(NRF_TIMER_Type *tInstance, DRV_TIMER_bitWidth_E bitWi
 void HAL_TIMER_setMode(NRF_TIMER_Type *tInstance, DRV_TIMER_mode_E mode);
 
 void HAL_TIMER_clearEvents(NRF_TIMER_Type *tInstance);
-void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint8_t channel);
+void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint32_t channel);
 void HAL_TIMER_runTask(NRF_TIMER_Type *tInstance, DRV_TIMER_task_E task);
 DRV_TIMER_event_E HAL_TIMER_getEvent(uint8_t channel);
-bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint8_t channel);
+bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint32_t channel);
 bool HAL_TIMER_checkIntEn(NRF_TIMER_Type *tInstance, uint8_t channel);
-void HAL_TIMER_enableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel);
+void HAL_TIMER_enableInterrupt(NRF_TIMER_Type *tInstance, uint32_t channel);
 void HAL_TIMER_disableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel);
 void HAL_TIMER_writeCompareValue(NRF_TIMER_Type *tInstance,
-        uint8_t channel,
+        uint32_t channel,
         uint32_t compareValue);
 uint32_t HAL_TIMER_getValue(NRF_TIMER_Type *tInstance, DRV_TIMER_cc_E channel);
 

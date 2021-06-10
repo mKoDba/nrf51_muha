@@ -30,6 +30,10 @@
 /***************************************************************************************************
  *                              DATA STRUCTURES
  **************************************************************************************************/
+extern volatile uint8_t muhaConnected;
+extern volatile uint8_t muhaMpuNotificationEnabled;
+extern volatile uint8_t muhaEcgNotificationEnabled;
+extern volatile uint8_t muhaBleTxBufferAvailable;
 
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DECLARATIONS

@@ -40,7 +40,7 @@
 #define ECG_VALUE_CHAR_UUID             (0x1401)    //!< ECG value characteristic UUID
 
 #define MPU_SERVICE_UUID                (0x1402)    //!< MPU9150 service UUID
-#define MPU_VALUE_CHAR_UUID             (0x1403)    //!< MPU9150 value characteristic UUID
+//#define MPU_VALUE_CHAR_UUID             (0x1403)    //!< MPU9150 value characteristic UUID
 
 /***************************************************************************************************
  *                              ENUMERATIONS

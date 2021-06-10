@@ -46,10 +46,12 @@
  **************************************************************************************************/
 //! Enum for types of events service can generate.
 typedef enum BLE_ECGS_evtType_ENUM {
-    BLE_ECGS_EVT_DISCONNECTED,          //!< Custom service disconnected event.
-    BLE_ECGS_EVT_CONNECTED,             //!< Custom service connected event.
-    BLE_CUS_EVT_NOTIFICATION_ENABLED,   //!< Custom value notification enabled event.
-    BLE_CUS_EVT_NOTIFICATION_DISABLED,  //!< Custom value notification disabled event.
+    BLE_ECGS_EVT_DISCONNECTED,              //!< Custom service disconnected event.
+    BLE_ECGS_EVT_CONNECTED,                 //!< Custom service connected event.
+    BLE_ECGS_EVT_ECG_NOTIFICATION_ENABLED,  //!< ECG data characteristic notification enabled event.
+    BLE_ECGS_EVT_ECG_NOTIFICATION_DISABLED, //!< ECG data characteristic notification disabled event.
+    BLE_ECGS_EVT_MPU_NOTIFICATION_ENABLED,  //!< MPU data characteristic notification enabled event.
+    BLE_ECGS_EVT_MPU_NOTIFICATION_DISABLED  //!< MPU data characteristic notification disabled event.
 } BLE_ECGS_evtType_E;
 
 /***************************************************************************************************
@@ -88,9 +90,9 @@ extern BLE_ECGS_custom_S m_ecgs;
  *                        PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
 void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S *customInit, ERR_E *err);
-void BLE_ECGS_onBleEvt(const ble_evt_t *ble_evt, void *context);
-void BLE_ECGS_customValueUpdate(BLE_ECGS_custom_S *customService, uint8_t *customValue, ERR_E *err);
-void BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuData, ERR_E *err);
+void BLE_ECGS_onBleEvt(ble_evt_t *ble_evt, void *context);
+uint32_t BLE_ECGS_ecgDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *ecgData);
+uint32_t BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuData);
 
 #endif // #ifndef BLE_ECGS_H_
 /***************************************************************************************************

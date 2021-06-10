@@ -32,6 +32,10 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
+#define DEPRECATED_TWI      true        //!< If set to true uses twi_hw_master drivers (workaround in order for TWI to work with SoftDevice)
+
+#define BSP_MPU9150_SENSOR_DATA_INT16_SIZE  (7u)    //!< Number of 16-bit (sensor) data stored to device data buffer
+
 /**********************************************************
 *    MPU-9150 Gyroscope and Accelerometer register map    *
 **********************************************************/
@@ -250,9 +254,11 @@ typedef struct BSP_MPU9150_config_STRUCT {
 typedef struct BSP_MPU9150_device_STRUCT {
     BSP_MPU9150_config_S    *config;        //!< Pointer to MPU9150 driver configuration
     nrf_drv_twi_t           *twiInstance;   //!< Pointer to TWI instance used
-    int16_t                 dataBuffer[7];
+    int16_t dataBuffer[BSP_MPU9150_SENSOR_DATA_INT16_SIZE];  //!< Data buffer for sensor data
     bool isInitialized;                     //!< Is device initialized
     volatile bool dataReady;                //!< Is new data ready flag
+    volatile bool twiTxDone;                //!< Is TWI TX transfer finished
+    volatile bool twiRxDone;                //!< Is TWI RX transfer finished
 
 } BSP_MPU9150_device_S;
 /***************************************************************************************************
@@ -270,25 +276,7 @@ void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
         int16_t *newValues,
         BSP_MPU9150_err_E *outErr);
 
-//void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
-//        const uint8_t startRegAddr,
-//        const uint8_t length,
-//        uint8_t *data,
-//        BSP_MPU9150_err_E *outErr);
-//
-//void BSP_MPU9150_calculateTemperature(const uint8_t *rawValue, int16_t *outTemp);
-//void BSP_MPU9150_calculateGyroValues(const BSP_MPU9150_device_S *inDevice,
-//        const uint8_t *rawValue,
-//        int16_t *outGyro);
-//void BSP_MPU9150_calculateAccValues(const BSP_MPU9150_device_S *inDevice,
-//        const uint8_t *rawValue,
-//        int16_t *outAcc);
-//void BSP_MPU9150_packDataToSend(const int16_t *gyroVals,
-//        const int16_t *accVals,
-//        const int16_t temp,
-//        int16_t *outBuffer);
-
-void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, void * p_context);
+void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const *p_event, void *p_context);
 
 #endif // #ifndef BSP_MPU9150_H_
 /***************************************************************************************************
