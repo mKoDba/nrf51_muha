@@ -33,7 +33,6 @@
 #include "nrf51_muha.h"
 #include "ble_muha.h"
 #include "ble_ecgs.h"
-#include "ble_mpu.h"
 #include "ble_bas.h"
 
 #include "nrf_gpio.h"
@@ -43,10 +42,10 @@
 #include "cfg_drv_spi.h"
 #include "cfg_drv_timer.h"
 #include "cfg_drv_nrf_twi.h"
-#include "cfg_bsp_ecg_ADS1192.h"
-#include "cfg_bsp_mpu9150.h"
 #include "cfg_nrf51_muha_pinout.h"
 #include "cfg_hal_watchdog.h"
+#include "cfg_bsp_ecg_ADS1192.h"
+#include "cfg_bsp_mpu9150.h"
 #include "SEGGER_RTT.h"
 
 /***************************************************************************************************
@@ -77,12 +76,13 @@ static void NRF51_MUHA_ledHeartbeatInterrupt(void *context);
 /***********************************************************************************************//**
  * @brief Initializes GPIOs, drivers, BSP needed for application.
  ***************************************************************************************************
- * @param [in, out] *outErr - error parameter.
+ * @param [in]   *muha   - pointer to main handle structure.
+ * @param [out]  *outErr - error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
  **************************************************************************************************/
-void NRF51_MUHA_init(ERR_E *outErr) {
+void NRF51_MUHA_init(NRF51_MUHA_handle_S *muha, ERR_E *outErr) {
 
     ERR_E err = ERR_NONE;
 
@@ -96,7 +96,7 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 
     NRF51_MUHA_initClock();
     // initialize TIMER1 instance
-    DRV_TIMER_init(&instanceTimer1, &configTimer1, NULL, &timerErr);
+    DRV_TIMER_init(muha->timer1, &configTimer1, NULL, &timerErr);
 
 #endif // #if (USE_HFCLK == true)
 
@@ -123,23 +123,25 @@ void NRF51_MUHA_init(ERR_E *outErr) {
 /***********************************************************************************************//**
  * @brief Function starts main application and should stay here in main loop.
  ***************************************************************************************************
- * @param [out]  *err - error parameter.
+ * @param [in]   *muha - pointer to main handle structure.
+ * @param [out]  *err  - error parameter.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    18.10.2020.
  **************************************************************************************************/
-void NRF51_MUHA_start(ERR_E *error) {
+void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
 
     ERR_E localErr = ERR_NONE;
     uint32_t err_code = NRF_SUCCESS;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
     BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
     DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
+    // 16-bit data from ADS1192 goes here
+    int16_t ecgData[3] = { 0 };
 
 //    if(localErr == ERR_NONE) {
 //        HAL_WATCHDOG_start();
 //    }
-
 
     // initialize timer module
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
@@ -149,10 +151,10 @@ void NRF51_MUHA_start(ERR_E *error) {
             APP_TIMER_MODE_REPEATED,
             NRF51_MUHA_ledHeartbeatInterrupt);
 
-    DRV_TIMER_enableTimer(&instanceTimer1, &timerErr);
+    DRV_TIMER_enableTimer(muha->timer1, &timerErr);
 
     if(localErr == ERR_NONE) {
-        BSP_ECG_ADS1192_startEcgReading(&ecgDevice, &ecgErr);
+        BSP_ECG_ADS1192_startEcgReading(muha->ads1192, &ecgErr);
     }
 
     if(ecgErr != BSP_ECG_ADS1192_err_NONE) {
@@ -163,7 +165,7 @@ void NRF51_MUHA_start(ERR_E *error) {
         nrf_drv_gpiote_in_event_enable(MPU_INT, true);
     }
 
-    BSP_MPU9150_updateValues(&mpuDevice, &mpuDevice.dataBuffer[0], &mpuErr);
+    BSP_MPU9150_updateValues(muha->mpu9150, &muha->mpu9150->dataBuffer[0], &mpuErr);
 
 //    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
 //
@@ -190,77 +192,52 @@ void NRF51_MUHA_start(ERR_E *error) {
             /*
              * new data ready to be read from ADS1192
              */
-            if(ecgDevice.dataReady == true) {
+            if(muha->ads1192->dataReady == true) {
 
-                DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-                uint8_t bytes[6] = { 0 };
-                // converted 16-bits data
-                int16_t outData[3] = { 0 };
+                BSP_ECG_ADS1192_readData(muha->ads1192, 6u, &ecgData[0], &ecgErr);
 
-//                BSP_ECG_ADS1192_readData(&ecgDevice, 6u, &outData[0], &ecgErr);
-
-                // get data bytes from ADS1192
-                DRV_SPI_masterRxBlocking(&instanceSpi0, 6u, &bytes[0], &spiErr);
-                // convert data to correct format
-                outData[0] = bytes[1] | (bytes[0] << 8u);
-                outData[1] = bytes[2] | (bytes[1] << 8u);
-                outData[2] = bytes[3] | (bytes[2] << 8u);
-
-                // fill buffer
-                if(ecgDevice.changeBuffer == true) {
-                    ecgDevice.buffer2[ecgDevice.sampleIndex] = outData[2];
-                } else {
-                    ecgDevice.buffer1[ecgDevice.sampleIndex] = outData[2];
-                }
-                ecgDevice.sampleIndex++;
+                muha->ads1192->buffer[muha->ads1192->sampleIndex] = ecgData[2];
+                muha->ads1192->sampleIndex++;
 
                 // with BLE notification, only 20 user data bytes is allowed on nRF51422
-                if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
-                    ecgDevice.bufferFull = true;
-                    ecgDevice.sampleIndex = 0u;
-                    ecgDevice.changeBuffer ^= 1u;
+                if(muha->ads1192->sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
+                    muha->ads1192->bufferFull = true;
+                    muha->ads1192->sampleIndex = 0u;
                 }
 
-                ecgDevice.dataReady = false;
+                muha->ads1192->dataReady = false;
             }
 
             // if the ECG buffer is filled, update ECG characteristic data in BLE custom service and push notification if there is TX buffer available
-            if(ecgDevice.bufferFull == true) {
-                if(ecgDevice.changeBuffer == 0u) {
-                    if(muhaBleTxBufferAvailable == true) {
-                        err_code = BLE_ECGS_ecgDataUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer1[0]);
-                    }
-                    if(err_code == BLE_ERROR_NO_TX_PACKETS) {
-                        muhaBleTxBufferAvailable = false;
-                    }
-                } else {
-                    err_code = BLE_ECGS_ecgDataUpdate(&m_ecgs, (uint8_t *) &ecgDevice.buffer2[0]);
-                    if(err_code == BLE_ERROR_NO_TX_PACKETS) {
-                        muhaBleTxBufferAvailable = false;
-                    }
+            if(muha->ads1192->bufferFull == true) {
+                if(muhaBleTxBufferAvailable == true) {
+                    err_code = BLE_ECGS_ecgDataUpdate(muha->customService, (uint8_t *) &muha->ads1192->buffer[0]);
+                }
+                if(err_code == BLE_ERROR_NO_TX_PACKETS) {
+                    muhaBleTxBufferAvailable = false;
                 }
 
-                ecgDevice.bufferFull = false;
+                muha->ads1192->bufferFull = false;
             }
 
             /*
              * new data ready to be read from MPU-9150
              */
-            if(mpuDevice.dataReady == true) {
+            if(muha->mpu9150->dataReady == true) {
                 // read in new values from MPU
-                BSP_MPU9150_updateValues(&mpuDevice, &mpuDevice.dataBuffer[0], &mpuErr);
+                BSP_MPU9150_updateValues(muha->mpu9150, &muha->mpu9150->dataBuffer[0], &mpuErr);
                 // update MPU characteristic data in BLE custom service and push notification if there is TX buffer available
                 if(muhaBleTxBufferAvailable == true) {
-                    err_code = BLE_ECGS_mpuDataUpdate(&m_ecgs, (uint8_t *) &mpuDevice.dataBuffer[0]);
+                    err_code = BLE_ECGS_mpuDataUpdate(muha->customService, (uint8_t *) &muha->mpu9150->dataBuffer[0]);
                 }
                 if(err_code == BLE_ERROR_NO_TX_PACKETS) {
                     muhaBleTxBufferAvailable = false;
                 }
-                mpuDevice.dataReady = false;
+                muha->mpu9150->dataReady = false;
             }
 
-            if(mpuDevice.twiRxDone == true) {
-                mpuDevice.twiRxDone = false;
+            if(muha->mpu9150->twiRxDone == true) {
+                muha->mpu9150->twiRxDone = false;
             }
         }
     }

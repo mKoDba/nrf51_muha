@@ -25,7 +25,11 @@
  *                              INCLUDE FILES
  **************************************************************************************************/
 #include <stdint.h>
+
 #include "bsp_ecg_ADS1192.h"
+#include "bsp_mpu9150.h"
+#include "drv_timer.h"
+#include "ble_ecgs.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -49,11 +53,10 @@ typedef enum ERR_ENUM {
     ERR_GPIO_INIT_FAIL,                             //!< GPIO initialization error.
     ERR_BLE_STACK_INIT_FAIL,                        //!< BLE stack/softdevice initialization error.
     ERR_BLE_GAP_INIT_FAIL,                          //!< BLE GAP parameters initialization error.
+    ERR_BLE_SERVICE_INIT_FAIL,                      //!< BLE custom service initialization error.
     ERR_BLE_CONNECTIONS_INIT_FAIL,                  //!< BLE Connections parameters initialization error.
     ERR_BLE_ADVERTISING_DATA_INIT_FAIL,             //!< BLE Advertising data initialization error.
     ERR_BLE_ADVERTISING_START_FAIL,                 //!< BLE Advertising start error.
-    ERR_BLE_CUSTOM_SERVICE_INIT_FAIL,               //!< BLE Custom service initialization error.
-    ERR_BLE_CUSTOM_SERVICE_RUNTIME_FAIL,            //!< BLE Custom service runtime error.
     ERR_ECG_ADS1192_START_FAIL,                     //!< ADS1192 device start error.
     ERR_MPU9150_START_FAIL,                         //!< MPU9150 device start error.
     ERR_HAL_WATCHDOG_INIT_FAIL,                     //!< WATCHDOG module initialization error.
@@ -61,11 +64,20 @@ typedef enum ERR_ENUM {
     ERR_COUNT                                       //!< Total number of errors.
 } ERR_E;
 
+//! nRF51 MUHA structure containing pointers to needed references
+typedef struct NRF51_MUHA_handle_STRUCT {
+    BSP_ECG_ADS1192_device_S *ads1192;              //!< Pointer to ADS1192 structure.
+    BSP_MPU9150_device_S     *mpu9150;              //!< Pointer to MPU9150 structure.
+    BLE_ECGS_custom_S        *customService;        //!< Pointer to Custom Service structure.
+    DRV_TIMER_instance_S     *timer1;               //!< Pointer to TIMER1 structure.
+
+} NRF51_MUHA_handle_S;
+
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
-void NRF51_MUHA_init(ERR_E *error);
-void NRF51_MUHA_start(ERR_E *error);
+void NRF51_MUHA_init(NRF51_MUHA_handle_S *muha, ERR_E *outErr);
+void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error);
 
 #endif // #ifndef NRF51_MUHA_H_
 /***************************************************************************************************

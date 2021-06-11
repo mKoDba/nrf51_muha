@@ -47,6 +47,11 @@
  **************************************************************************************************/
 #include "nrf51_muha.h"
 
+#include "cfg_bsp_ecg_ADS1192.h"
+#include "cfg_bsp_mpu9150.h"
+#include "cfg_ble_muha.h"
+#include "cfg_drv_timer.h"
+
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
@@ -66,10 +71,16 @@ int main(void) {
 
     ERR_E error = ERR_NONE;
 
-    NRF51_MUHA_init(&error);
+    NRF51_MUHA_handle_S muha;
+    muha.ads1192 = &ecgDevice;
+    muha.mpu9150 = &mpuDevice;
+    muha.customService = &customService;
+    muha.timer1 = &instanceTimer1;
+
+    NRF51_MUHA_init(&muha, &error);
 
     if(error == ERR_NONE) {
-        NRF51_MUHA_start(&error);
+        NRF51_MUHA_start(&muha, &error);
     }
 
     // should not get to here

@@ -155,8 +155,7 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
-    int16_t buffer1[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
-    int16_t buffer2[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
+    int16_t buffer[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE];  //!< ADC values buffer to be processed
     uint16_t sampleIndex;                       //!< Current index of sample
 #if (DEBUG == true)
     int16_t temperature;                        //!< Temperature of device
@@ -166,7 +165,6 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
     bool isInitialized;                         //!< Is device initialized
     volatile bool dataReady;                    //!< Is data ready flag
     volatile bool bufferFull;                   //!< Is device data buffer filled
-    volatile bool changeBuffer;
 } BSP_ECG_ADS1192_device_S;
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
@@ -187,7 +185,6 @@ void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
         const uint16_t inSize,
         int16_t *outData,
         BSP_ECG_ADS1192_err_E *outErr);
-void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 
 #endif // #ifndef BSP_ECG_ADS1192_H_
 /***************************************************************************************************

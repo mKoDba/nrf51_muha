@@ -46,10 +46,10 @@
  **************************************************************************************************/
 static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
-        ERR_E *err);
+        BLE_ECGS_err_E *err);
 static void BLE_ECGS_mpuDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
-        ERR_E *err);
+        BLE_ECGS_err_E *err);
 static void BLE_ECGS_onConnect(BLE_ECGS_custom_S *customService, ble_evt_t const *p_ble_evt);
 static void BLE_ECGS_onWrite(BLE_ECGS_custom_S *customService, ble_evt_t *p_ble_evt);
 static void BLE_ECGS_onDisconnect(BLE_ECGS_custom_S *customService, ble_evt_t const *p_ble_evt);
@@ -67,9 +67,11 @@ static void BLE_ECGS_onDisconnect(BLE_ECGS_custom_S *customService, ble_evt_t co
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S *customInit, ERR_E *err) {
+void BLE_ECGS_init(BLE_ECGS_custom_S *customService,
+        const BLE_ECGS_customInit_S *customInit,
+        BLE_ECGS_err_E *err) {
 
-    ERR_E localErr = ERR_NONE;
+    BLE_ECGS_err_E localErr = BLE_ECGS_err_NONE;
     uint32_t err_code;
     ble_uuid_t ble_uuid;
 
@@ -81,13 +83,13 @@ void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S
 
         // add custom service UUID
         ble_uuid128_t base_uuid = { ECG_SERVICE_UUID_BASE };
-        err_code =  sd_ble_uuid_vs_add(&base_uuid, &customService->uuid_type);
+        err_code = sd_ble_uuid_vs_add(&base_uuid, &customService->uuid_type);
 
         if(err_code != NRF_SUCCESS) {
-            localErr = ERR_BLE_CUSTOM_SERVICE_INIT_FAIL;
+            localErr = BLE_ECGS_err_INIT_FAIL;
         }
 
-        if(localErr == ERR_NONE) {
+        if(localErr == BLE_ECGS_err_NONE) {
             ble_uuid.type = customService->uuid_type;
             ble_uuid.uuid = ECG_SERVICE_UUID;
             // add the custom service
@@ -95,20 +97,20 @@ void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S
         }
 
         if (err_code != NRF_SUCCESS) {
-            localErr = ERR_BLE_CUSTOM_SERVICE_INIT_FAIL;
+            localErr = BLE_ECGS_err_RUNTIME_FAIL;
         }
 
-        if(localErr == ERR_NONE) {
+        if(localErr == BLE_ECGS_err_NONE) {
             // add ECG data characteristics
             BLE_ECGS_ecgDataCharAdd(customService, customInit, &localErr);
         }
 
-        if(localErr == ERR_NONE) {
+        if(localErr == BLE_ECGS_err_NONE) {
             // add MPU data characteristics
             BLE_ECGS_mpuDataCharAdd(customService, customInit, &localErr);
         }
     } else {
-        localErr = ERR_NULL_PARAMETER;
+        localErr = BLE_ECGS_err_NULL_PARAM;
     }
 
     if(err != NULL) {
@@ -237,9 +239,9 @@ uint32_t BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuDa
  **************************************************************************************************/
 static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
-        ERR_E *err) {
+        BLE_ECGS_err_E *err) {
 
-    ERR_E localErr = ERR_NONE;
+    BLE_ECGS_err_E localErr = BLE_ECGS_err_NONE;
     uint32_t err_code;
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_md_t cccd_md;
@@ -296,7 +298,7 @@ static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
             &customService->custom_value_handles);
 
     if (err_code != NRF_SUCCESS) {
-       localErr = ERR_BLE_CUSTOM_SERVICE_INIT_FAIL;
+       localErr = BLE_ECGS_err_CHARACTERISTIC_INIT_FAIL;
     }
 
     if(err != NULL) {
@@ -316,9 +318,9 @@ static void BLE_ECGS_ecgDataCharAdd(BLE_ECGS_custom_S *customService,
  **************************************************************************************************/
 static void BLE_ECGS_mpuDataCharAdd(BLE_ECGS_custom_S *customService,
         const BLE_ECGS_customInit_S *customInit,
-        ERR_E *err) {
+        BLE_ECGS_err_E *err) {
 
-    ERR_E localErr = ERR_NONE;
+    BLE_ECGS_err_E localErr = BLE_ECGS_err_NONE;
     uint32_t err_code;
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_md_t cccd_md;
@@ -372,7 +374,7 @@ static void BLE_ECGS_mpuDataCharAdd(BLE_ECGS_custom_S *customService,
             &customService->mpu_handles);
 
     if(err_code != NRF_SUCCESS) {
-       localErr = ERR_BLE_CUSTOM_SERVICE_INIT_FAIL;
+       localErr = BLE_ECGS_err_CHARACTERISTIC_INIT_FAIL;
     }
 
     if(err != NULL) {

@@ -94,6 +94,8 @@ ble_gap_conn_params_t gapConnectionParams = {
         .conn_sup_timeout  = BLE_MUHA_CONN_SUP_TIMEOUT
 };
 
+BLE_ECGS_custom_S customService;                               //!< Structure used to identify the ECG service.
+
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/

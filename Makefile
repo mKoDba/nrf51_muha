@@ -16,7 +16,6 @@ SRC_FILES += \
   $(PROJ_DIR)/application/nrf51_muha.c \
   $(PROJ_DIR)/application/ble_muha.c \
   $(PROJ_DIR)/application/ble_ecgs.c \
-  $(PROJ_DIR)/application/ble_mpu.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
   $(PROJ_DIR)/application/bsp/bsp_mpu9150.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \

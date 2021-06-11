@@ -625,45 +625,6 @@ static void BSP_ECG_ADS1192_initReset(BSP_ECG_ADS1192_device_S *inDevice,
     }
 }
 
-// TODO: remove this - not needed at all anymore (handled in application)
-///***********************************************************************************************//**
-// * @brief Starts reading and outputting data received from channel inputs.
-// ***************************************************************************************************
-// * @param [in]  pin    - GPIOTE pin number.
-// * @param [in]  action - GPIOTE trigger action.
-// ***************************************************************************************************
-// * @author  mario.kodba
-// * @date    13.12.2020
-// **************************************************************************************************/
-//void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
-//
-//    DRV_SPI_err_E spiErr = DRV_SPI_err_NONE;
-//    uint8_t bytes[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME] = { 0 };
-//    // converted 16-bits data
-//    int16_t outData[BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME/2] = { 0 };
-//
-//    // get data bytes from ADS1192
-//    DRV_SPI_masterRxBlocking(&instanceSpi0, BSP_ECG_ADS1192_SPI_SIZE_SINGLE_FRAME, &bytes[0], &spiErr);
-//    // convert data to correct format
-//    BSP_ECG_ADS1192_convertSignalToSignedVal(&bytes[0], &outData[0]);
-//
-//    // fill buffer
-//    if(ecgDevice.changeBuffer == true) {
-//        ecgDevice.buffer2[ecgDevice.sampleIndex] = outData[2];
-//    } else {
-//        ecgDevice.buffer1[ecgDevice.sampleIndex] = outData[2];
-//    }
-//
-//    ecgDevice.sampleIndex++;
-//
-//    // with BLE notification, only 20 user data bytes is allowed on nRF51422
-//    if(ecgDevice.sampleIndex == BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE) {
-//        ecgDevice.bufferFull = true;
-//        ecgDevice.sampleIndex = 0u;
-//        ecgDevice.changeBuffer ^= 1u;
-//    }
-//}
-
 #if (DEBUG == true)
 /***********************************************************************************************//**
  * @brief Sets device MUX to read PCB temperature from device sensor.

@@ -25,7 +25,6 @@
  **************************************************************************************************/
 #include <stdint.h>
 #include <stdbool.h>
-#include "nrf51_muha.h"
 #include "ble.h"
 #include "ble_srv_common.h"
 
@@ -44,6 +43,17 @@
 /***************************************************************************************************
  *                              ENUMERATIONS
  **************************************************************************************************/
+//! Enum for BLE custom service errors
+typedef enum BLE_ECGS_err_ENUM {
+    BLE_ECGS_err_NONE,                      //!< BLE Custom service no error.
+    BLE_ECGS_err_NULL_PARAM,                //!< BLE Custom service null pointer error.
+    BLE_ECGS_err_INIT_FAIL,                 //!< BLE Custom service initialization error.
+    BLE_ECGS_err_CHARACTERISTIC_INIT_FAIL,  //!< BLE Custom service adding characteristic error.
+    BLE_ECGS_err_RUNTIME_FAIL,              //!< BLE Custom service runtime error.
+
+    BLE_ECGS_err_COUNT                      //!< BLE Custom service total error count.
+} BLE_ECGS_err_E;
+
 //! Enum for types of events service can generate.
 typedef enum BLE_ECGS_evtType_ENUM {
     BLE_ECGS_EVT_DISCONNECTED,              //!< Custom service disconnected event.
@@ -84,12 +94,10 @@ typedef struct BLE_ECGS_custom_STRUCT {
     uint8_t                       uuid_type;                    //!< Type of UUID
 } BLE_ECGS_custom_S;
 
-extern BLE_ECGS_custom_S m_ecgs;
-
 /***************************************************************************************************
  *                        PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
-void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S *customInit, ERR_E *err);
+void BLE_ECGS_init(BLE_ECGS_custom_S *customService, const BLE_ECGS_customInit_S *customInit, BLE_ECGS_err_E *err);
 void BLE_ECGS_onBleEvt(ble_evt_t *ble_evt, void *context);
 uint32_t BLE_ECGS_ecgDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *ecgData);
 uint32_t BLE_ECGS_mpuDataUpdate(BLE_ECGS_custom_S *customService, uint8_t *mpuData);

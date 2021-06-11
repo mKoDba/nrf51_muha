@@ -32,7 +32,6 @@
 
 #include "ble_bas.h"
 #include "ble_ecgs.h"
-#include "ble_mpu.h"
 
 #include "cfg_ble_muha.h"
 #include "cfg_bsp_ecg_ADS1192.h"
@@ -45,8 +44,6 @@
                                                              When changing this number remember to adjust the RAM settings */
 #define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    /*!< Number of peripheral links used by the application.
                                                              When changing this number remember to adjust the RAM settings */
-
-BLE_ECGS_custom_S m_ecgs;                               //!< Structure used to identify the ECG service.
 
 ble_bas_t m_bas;                                        //!< Structure used to identify the battery service.
 
@@ -137,7 +134,7 @@ void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent) {
 
     ble_bas_on_ble_evt(&m_bas, bleEvent);
 
-    BLE_ECGS_onBleEvt(bleEvent, &m_ecgs);
+    BLE_ECGS_onBleEvt(bleEvent, &customService);
 
     // in case of disconnect, start advertising again
     if(bleEvent->header.evt_id == BLE_GAP_EVT_DISCONNECTED) {
@@ -239,6 +236,7 @@ static void BLE_MUHA_gapInit(ERR_E *err) {
 static void BLE_MUHA_servicesInit(ERR_E *err) {
 
     ERR_E localErr = ERR_NONE;
+    BLE_ECGS_err_E customServiceErr = BLE_ECGS_err_NONE;
     uint32_t nrfErrCode = NRF_SUCCESS;
     BLE_ECGS_customInit_S ecgs_init;
     ble_bas_init_t bas_init;
@@ -277,7 +275,11 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.cccd_write_perm);
 
     if(localErr == ERR_NONE) {
-        BLE_ECGS_init(&m_ecgs, &ecgs_init, &localErr);
+        BLE_ECGS_init(&customService, &ecgs_init, &customServiceErr);
+    }
+
+    if(customServiceErr != BLE_ECGS_err_NONE) {
+        localErr = ERR_BLE_SERVICE_INIT_FAIL;
     }
 
     if(err != NULL) {
