@@ -132,8 +132,6 @@ void BLE_MUHA_advertisingStart(ERR_E *err) {
  **************************************************************************************************/
 void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent) {
 
-    ble_bas_on_ble_evt(&m_bas, bleEvent);
-
     BLE_ECGS_onBleEvt(bleEvent, &customService);
 
     // in case of disconnect, start advertising again
@@ -346,14 +344,6 @@ static void BLE_MUHA_advertisingInit(ERR_E *err) {
  **************************************************************************************************/
 static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *event) {
 
-    static uint16_t countEvent = 0u;
-    countEvent++;
-
-    if(countEvent > 1000u) {
-        nrf_gpio_pin_toggle(LD1);
-        countEvent = 0u;
-    }
-
     switch(event->evt_type) {
         case BLE_ECGS_EVT_ECG_NOTIFICATION_ENABLED:
             muhaEcgNotificationEnabled = true;
@@ -373,14 +363,10 @@ static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_
 
         case BLE_ECGS_EVT_CONNECTED:
             muhaConnected = true;
-            // turns on LED 1
-            nrf_gpio_pin_clear(LD1);
             break;
 
         case BLE_ECGS_EVT_DISCONNECTED:
             muhaConnected = false;
-            // turns off LED 1
-            nrf_gpio_pin_set(LD1);
             break;
 
         default:

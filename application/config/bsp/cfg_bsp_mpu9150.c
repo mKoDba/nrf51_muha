@@ -29,6 +29,7 @@
  *                              DEFINES
  **************************************************************************************************/
 #define BSP_MPU9150_I2C_ADDRESS         (0b1101000u)    //!< MPU-9150 device I2C address
+#define BSP_MPU9150_MAG_I2C_ADDRESS     (0x0Cu)         //!< MPU-9150 magnetometer device I2C address
 
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
@@ -43,6 +44,7 @@ BSP_MPU9150_device_S mpuDevice = {
 //! MPU-9150 configuration structure
 BSP_MPU9150_config_S mpuDeviceConfig = {
         .mpuAddress = BSP_MPU9150_I2C_ADDRESS,
+        .mpuMagAddress = BSP_MPU9150_MAG_I2C_ADDRESS,
         .gyroRange = BSP_MPU9150_gyroFsRange_2000degS,
         .accRange = BSP_MPU9150_accFsRange_16G
 };

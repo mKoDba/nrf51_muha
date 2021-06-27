@@ -36,8 +36,6 @@
 *    * (non Nordic) drivers (nRF51 peripheral drivers)
 *    * (non Nordic) HAL (Hardware abstraction layer)
 * - SDK (Nordic SDK)
-* - SEGGER_RTT (Segger's library)
-*
 *
 ***************************************************************************************************/
 
@@ -51,6 +49,10 @@
 #include "cfg_bsp_mpu9150.h"
 #include "cfg_ble_muha.h"
 #include "cfg_drv_timer.h"
+
+#include "nrf_delay.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -69,7 +71,11 @@
  **************************************************************************************************/
 int main(void) {
 
+    nrf_delay_ms(200u);
+
     ERR_E error = ERR_NONE;
+
+    uint32_t err_code = NRF_LOG_INIT(NULL);
 
     NRF51_MUHA_handle_S muha;
     muha.ads1192 = &ecgDevice;

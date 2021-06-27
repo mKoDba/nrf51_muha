@@ -245,6 +245,7 @@ typedef union BSP_MPU9150_intConfigReg_UNION {
 //! MPU9150 driver configuration structure
 typedef struct BSP_MPU9150_config_STRUCT {
     uint8_t mpuAddress;                     //!< MPU-9150 I2C address
+    uint8_t mpuMagAddress;                  //!< MPU-9150 magnetometer I2C address
     BSP_MPU9150_gyroFsRange_E gyroRange;    //!< Gyroscope FS range
     BSP_MPU9150_accFsRange_E  accRange;     //!< Accelerometer FS range
 
@@ -277,6 +278,16 @@ void BSP_MPU9150_updateValues(BSP_MPU9150_device_S *inDevice,
         BSP_MPU9150_err_E *outErr);
 
 void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const *p_event, void *p_context);
+
+void BSP_MPU9150_readSingleMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t regAddr,
+        uint8_t *data,
+        BSP_MPU9150_err_E *outErr);
+void BSP_MPU9150_readMultiMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t startRegAddr,
+        const uint8_t length,
+        uint8_t *data,
+        BSP_MPU9150_err_E *outErr);
 
 #endif // #ifndef BSP_MPU9150_H_
 /***************************************************************************************************

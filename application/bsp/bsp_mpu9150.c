@@ -64,6 +64,8 @@
 #define BSP_MPU9150_PLL_REFERENCE_VALUE         (0x01u)         //!< Value to send to set PLL reference as X Gyroscope
 #define BSP_MPU9150_DEVICE_ID_VALUE             (0b01101000u)   //!< Device ID that will verify correct device operation
 
+#define BSP_MPU9150_MAGNETOMETER_ID_VALUE       (0b01001000u)   //!< Device ID of magnetometer that will verify correct device operation
+#define BSP_MPU9150_MAGNETOMETER_SINGLE_MEAS_MODE (1u)          //!< Magnetometer single measurement mode control register value
 
 /***************************************************************************************************
  *                          GLOBAL VARIABLES
@@ -99,6 +101,11 @@ static void BSP_MPU9150_readMultiReg(BSP_MPU9150_device_S *inDevice,
         const uint8_t length,
         uint8_t *data,
         BSP_MPU9150_err_E *outErr);
+static void BSP_MPU9150_writeSingleMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t regAddr,
+        const uint8_t regData,
+        BSP_MPU9150_err_E *outErr);
+
 static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU9150_err_E *outErr);
 
 /***************************************************************************************************
@@ -143,8 +150,8 @@ void BSP_MPU9150_init(BSP_MPU9150_device_S *inDevice,
                     BSP_MPU9150_REG_PWR_MGMT_1,
                     BSP_MPU9150_PLL_REFERENCE_VALUE,
                     &err);
-            // wait 1ms for PLL to settle (datasheet)
-            nrf_delay_ms(1u);
+            // wait 2ms for PLL to settle (datasheet)
+            nrf_delay_ms(2u);
         }
 
         if(err == BSP_MPU9150_err_NONE) {
@@ -305,6 +312,61 @@ static void BSP_MPU9150_writeSingleReg(BSP_MPU9150_device_S *inDevice,
 }
 
 /***********************************************************************************************//**
+ * @brief Function for writing to single register of MPU9150 magnetometer.
+ ***************************************************************************************************
+ * @param [in]  *inDevice    - pointer to device structure for ECG driver.
+ * @param [in]  regAddr      - register address.
+ * @param [in]  regData      - data to be sent.
+ * @param [out] *outErr      - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    15.05.2021
+ **************************************************************************************************/
+static void BSP_MPU9150_writeSingleMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t regAddr,
+        const uint8_t regData,
+        BSP_MPU9150_err_E *outErr) {
+
+    BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
+
+    // assemble I2C data - 1 byte register address, 1 byte data
+    uint8_t msg[BSP_MPU9150_SINGLE_REG_MSG_SIZE] = { regAddr, regData };
+
+#if (DEPRECATED_TWI == false)
+    err_code = nrf_drv_twi_tx(inDevice->twiInstance,
+            inDevice->config->mpuMagAddress,
+            &msg[0],
+            BSP_MPU9150_SINGLE_REG_MSG_SIZE,
+            false);
+
+    if(err_code != NRF_SUCCESS) {
+        err = BSP_MPU9150_err_I2C_READ_WRITE;
+    }
+
+    // TODO: add proper timeout check with timer
+    // wait for transfer finish or timeout
+    while((!twi_tx_done) && --timeout);
+
+    if(!timeout) {
+        err = BSP_MPU9150_err_I2C_TIMEOUT;
+    }
+
+    twi_tx_done = false;
+
+#else
+    twi_master_transfer((inDevice->config->mpuMagAddress << 1u) | 0u, &msg[0], 2u, false);
+#endif // (DEPRECATED_TWI == false)
+
+    if(outErr != NULL) {
+        *outErr = err;
+    }
+}
+
+/***********************************************************************************************//**
  * @brief Function for reading from single register of MPU9150.
  ***************************************************************************************************
  * @param [in]  *inDevice    - pointer to device structure for ECG driver.
@@ -374,6 +436,162 @@ static void BSP_MPU9150_readSingleReg(BSP_MPU9150_device_S *inDevice,
     // RX data from register (single - 1 byte)
     twi_master_transfer((inDevice->config->mpuAddress << 1u) | 1u, data, 1u, false);
 #endif // (DEPRECATED_TWI == false)
+
+    if(outErr != NULL) {
+        *outErr = err;
+    }
+}
+
+/***********************************************************************************************//**
+ * @brief Function for reading from single register of MPU9150 magnetometer sensor.
+ ***************************************************************************************************
+ * @param [in]  *inDevice    - pointer to device structure for ECG driver.
+ * @param [in]  regAddr      - register address.
+ * @param [in]  *data        - pointer to data to read.
+ * @param [out] *outErr      - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    15.05.2021
+ **************************************************************************************************/
+void BSP_MPU9150_readSingleMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t regAddr,
+        uint8_t *data,
+        BSP_MPU9150_err_E *outErr) {
+
+    BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
+
+#if (DEPRECATED_TWI == false)
+    // after first START condition send |SLAVE_ADDR+W|REG_ADDR|
+    err_code = nrf_drv_twi_tx(inDevice->twiInstance,
+            inDevice->config->mpuMagAddress,
+            &regAddr,
+            1u,
+            false);
+
+    if(err_code != NRF_SUCCESS) {
+        err = BSP_MPU9150_err_I2C_READ_WRITE;
+    }
+
+    // TODO: add proper timeout check with timer
+    // wait for transfer finish or timeout
+    while((!twi_tx_done) && --timeout);
+
+    if(!timeout) {
+        err = BSP_MPU9150_err_I2C_TIMEOUT;
+    }
+    twi_tx_done = false;
+
+    // after second START condition read in data from register
+    err_code = nrf_drv_twi_rx(inDevice->twiInstance,
+            inDevice->config->mpuMagAddress,
+            data,
+            1u);
+
+    if(err_code != NRF_SUCCESS) {
+        err = BSP_MPU9150_err_I2C_READ_WRITE;
+    }
+
+    // TODO: add proper timeout check with timer
+    // wait for transfer finish or timeout
+    timeout = BSP_MPU9150_TWI_TIMEOUT;
+    while((!twi_rx_done) && --timeout);
+
+    if(!timeout) {
+        err = BSP_MPU9150_err_I2C_TIMEOUT;
+    }
+    twi_rx_done = false;
+
+#else
+    // TX first the reg address with write bit
+    twi_master_transfer((inDevice->config->mpuMagAddress << 1u) | 0u, &regAddr, 1u, false);
+
+    // RX data from register (single - 1 byte)
+    twi_master_transfer((inDevice->config->mpuMagAddress << 1u) | 1u, data, 1u, false);
+#endif // (DEPRECATED_TWI == false)
+
+    if(outErr != NULL) {
+        *outErr = err;
+    }
+}
+
+/***********************************************************************************************//**
+ * @brief Function for reading from multiple successive registers of MPU9150 magnetometer.
+ ***************************************************************************************************
+ * @param [in]  *inDevice    - pointer to device structure for MPU-9150 driver.
+ * @param [in]  startRegAddr - starting register address.
+ * @param [in]  length       - number of registers (bytes) to read.
+ * @param [in]  *data        - pointer to data to read.
+ * @param [out] *outErr      - error parameter.
+ ***************************************************************************************************
+ * @author  mario.kodba
+ * @date    15.05.2021
+ **************************************************************************************************/
+void BSP_MPU9150_readMultiMagReg(BSP_MPU9150_device_S *inDevice,
+        uint8_t startRegAddr,
+        const uint8_t length,
+        uint8_t *data,
+        BSP_MPU9150_err_E *outErr) {
+
+    BSP_MPU9150_err_E err = BSP_MPU9150_err_NONE;
+#if (DEPRECATED_TWI == false)
+    uint32_t err_code;
+    volatile uint32_t timeout = BSP_MPU9150_TWI_TIMEOUT;
+#endif // (DEPRECATED_TWI == false)
+
+#if (DEPRECATED_TWI == false)
+    // after first START condition send |SLAVE_ADDR+W|START_REG_ADDR|
+    err_code = nrf_drv_twi_tx(inDevice->twiInstance,
+            inDevice->config->mpuMagAddress,
+            &startRegAddr,
+            1u,
+            false);
+
+    if(err_code != NRF_SUCCESS) {
+        err = BSP_MPU9150_err_I2C_READ_WRITE;
+    }
+
+    // TODO: add proper timeout check with timer
+    // wait for transfer finish or timeout
+    while((!inDevice->twiTxDone) && --timeout);
+
+    if(!timeout) {
+        err = BSP_MPU9150_err_I2C_TIMEOUT;
+    }
+    inDevice->twiTxDone = false;
+
+    // after second START condition read in data from registers
+    err_code = nrf_drv_twi_rx(inDevice->twiInstance,
+            inDevice->config->mpuMagAddress,
+            data,
+            length);
+
+    if(err_code != NRF_SUCCESS) {
+        err = BSP_MPU9150_err_I2C_READ_WRITE;
+    }
+
+    // TODO: add proper timeout check with timer
+    // wait for transfer finish or timeout
+    timeout = BSP_MPU9150_TWI_TIMEOUT;
+    while((!inDevice->twiRxDone) && --timeout);
+
+    if(!timeout) {
+        err = BSP_MPU9150_err_I2C_TIMEOUT;
+    }
+    inDevice->twiRxDone = false;
+
+#else
+    // TX first the register address with write bit
+    err = twi_master_transfer((inDevice->config->mpuMagAddress << 1u) | 0u, &startRegAddr, 1u, false);
+
+    // RX data from register
+    err &= twi_master_transfer((inDevice->config->mpuMagAddress << 1u) | 1u, data, length, true);
+
+    err = 1 ? 0 : err;
+#endif
 
     if(outErr != NULL) {
         *outErr = err;
@@ -660,8 +878,8 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
          * can be either 8kHz when DLPF is disabled, or 1kHz when DLPF is enabled
          */
 
-        // worked with 199
-        uint8_t samplingRateRegVal = 19u;
+        // worked with 199, 143
+        uint8_t samplingRateRegVal = 9u;
         BSP_MPU9150_writeSingleReg(inDevice,
                 BSP_MPU9150_REG_SMPLRT_DIV,
                 samplingRateRegVal,
@@ -671,8 +889,8 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
          * Configuration register sets up DLPF and sampling of External FSYNC pin
          */
         if(err == BSP_MPU9150_err_NONE ) {
-            // enables/disables DLPF
-            configRegVal.B.dlpfCfg = true;
+            // sets DLPF value
+            configRegVal.B.dlpfCfg = 2u;
             configRegVal.B.extSyncSet = false;
 
             BSP_MPU9150_writeSingleReg(inDevice,
@@ -703,6 +921,7 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
         if(err == BSP_MPU9150_err_NONE ) {
             intConfigReg.B.fsyncIntEn = false;
             intConfigReg.B.fsyncIntLevel = false;
+            // if true enables I2C bypass, so we can directly access magnetometer through I2C
             intConfigReg.B.i2cBypassEn = false;
             intConfigReg.B.intLevel = false;
             intConfigReg.B.intOpen = false;
@@ -745,6 +964,16 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
                     accConfigReg.R,
                     &err);
         }
+
+        /*
+         * Setup magnetometer configuration
+         */
+//        if(err == BSP_MPU9150_err_NONE ) {
+//            BSP_MPU9150_writeSingleMagReg(inDevice,
+//                    BSP_MPU9150_REG_MAG_CNTL,
+//                    BSP_MPU9150_MAGNETOMETER_SINGLE_MEAS_MODE,
+//                    &err);
+//        }
 
         /*
          * Interrupt enable setup
