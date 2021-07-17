@@ -10,7 +10,7 @@
  *
  */
 #include "sdk_common.h"
-#if NRF_MODULE_ENABLED(APP_FIFO)
+
 #include "app_fifo.h"
 
 static __INLINE uint32_t fifo_length(app_fifo_t * p_fifo)
@@ -183,4 +183,3 @@ uint32_t app_fifo_write(app_fifo_t * p_fifo, uint8_t const * p_byte_array, uint3
 
     return NRF_SUCCESS;
 }
-#endif //NRF_MODULE_ENABLED(APP_FIFO)

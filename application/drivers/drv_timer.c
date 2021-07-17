@@ -358,8 +358,8 @@ void DRV_TIMER_compareEnableTimer(DRV_TIMER_instance_S *tInstance,
         if(DRV_TIMER_isInit[tInstance->config->id] == true) {
             if(tInstance->config->mode == DRV_TIMER_mode_NORMAL) {
                 // enable interrupt on COMPARE event
-                HAL_TIMER_enableInterrupt(tInstance->config->timerReg, channel);
-                HAL_TIMER_writeCompareValue(tInstance->config->timerReg, channel, compareValue);
+                HAL_TIMER_enableInterrupt(tInstance->config->timerReg, (uint32_t) channel);
+                HAL_TIMER_writeCompareValue(tInstance->config->timerReg, (uint32_t) channel, compareValue);
             }
         } else {
             err = DRV_TIMER_err_NO_TIMER_INSTANCE;
@@ -411,8 +411,9 @@ void DRV_TIMER_compareDisableTimer(DRV_TIMER_instance_S *tInstance,
  * @brief Function returns time difference in us between two time measurements.
  ***************************************************************************************************
  * @param [in]   *tInstance  - pointer to timer instance structure.
- * @param [in]   *start      - first timer value.
- * @param [in]   *stop       - second timer value.
+ * @param [in]   *start      - pointer to first timer value.
+ * @param [in]   *stop       - pointer to second timer value.
+ * @return Time difference between stop and start values [us].
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    28.12.2020.
@@ -452,12 +453,10 @@ static void DRV_TIMER_irqHandler(DRV_TIMER_id_E timerInstanceId) {
             // check on which CC channel was interrupt generated
             if(HAL_TIMER_checkIntEn(timerInstances[timerInstanceId], i) &&
                     HAL_TIMER_checkEvent(timerInstances[timerInstanceId], i)) {
-                // get the event
-                DRV_TIMER_event_E event = HAL_TIMER_getEvent(i);
                 // clear event register
                 HAL_TIMER_clearEvent(timerInstances[timerInstanceId], i);
                 // call user provided callback
-                DRV_TIMER_controlBlock[timerInstanceId].callbackFunction(event, DRV_TIMER_controlBlock[timerInstanceId].context);
+                DRV_TIMER_controlBlock[timerInstanceId].callbackFunction(i, DRV_TIMER_controlBlock[timerInstanceId].context);
             }
         }
     }

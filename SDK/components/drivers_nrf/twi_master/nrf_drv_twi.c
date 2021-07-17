@@ -29,9 +29,9 @@
 #define NRF_LOG_LEVEL       TWI_CONFIG_LOG_LEVEL
 #define NRF_LOG_INFO_COLOR  TWI_CONFIG_INFO_COLOR
 #define NRF_LOG_DEBUG_COLOR TWI_CONFIG_DEBUG_COLOR
-#define EVT_TO_STR(event)   (event == NRF_DRV_TWI_EVT_DONE ? "EVT_DONE" :                            \
-                            (event == NRF_DRV_TWI_EVT_ADDRESS_NACK ? "EVT_ADDRESS_NACK" :            \
-                            (event == NRF_DRV_TWI_EVT_DATA_NACK ? "EVT_DATA_NACK" : "UNKNOWN ERROR"))))))
+//#define EVT_TO_STR(event)   (event == NRF_DRV_TWI_EVT_DONE ? "EVT_DONE" :                            \
+//                            (event == NRF_DRV_TWI_EVT_ADDRESS_NACK ? "EVT_ADDRESS_NACK" :            \
+//                            (event == NRF_DRV_TWI_EVT_DATA_NACK ? "EVT_DATA_NACK" : "UNKNOWN ERROR"))))))
 #define EVT_TO_STR_TWI(event)   (event == NRF_TWI_EVENT_STOPPED ? "NRF_TWI_EVENT_STOPPED" :                            \
                                 (event == NRF_TWI_EVENT_RXDREADY ? "NRF_TWI_EVENT_RXDREADY" :                          \
                                 (event == NRF_TWI_EVENT_TXDSENT ? "NRF_TWI_EVENT_TXDSENT" :                            \
@@ -1056,18 +1056,18 @@ static void irq_handler_twi(NRF_TWI_Type * p_twi, twi_control_block_t * p_cb)
             if (errorsrc & NRF_TWI_ERROR_ADDRESS_NACK)
             {
                 event.type = NRF_DRV_TWI_EVT_ADDRESS_NACK;
-                NRF_LOG_DEBUG("Event: %s.\r\n", (uint32_t)EVT_TO_STR(NRF_DRV_TWI_EVT_ADDRESS_NACK));
+                NRF_LOG_DEBUG("Event: EVT_ADDRESS_NACK.\r\n");
             }
             else if (errorsrc & NRF_TWI_ERROR_DATA_NACK)
             {
                 event.type = NRF_DRV_TWI_EVT_DATA_NACK;
-                NRF_LOG_DEBUG("Event: %s.\r\n", (uint32_t)EVT_TO_STR(NRF_DRV_TWI_EVT_DATA_NACK));
+                NRF_LOG_DEBUG("Event: EVT_DATA_NACK.\r\n");
             }
         }
         else
         {
             event.type = NRF_DRV_TWI_EVT_DONE;
-            NRF_LOG_DEBUG("Event: %s.\r\n", (uint32_t)EVT_TO_STR(NRF_DRV_TWI_EVT_DONE));
+            NRF_LOG_DEBUG("Event: EVT_DONE.\r\n");
         }
 
         p_cb->busy = false;

@@ -13,68 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    main.c
+ * @file    cfg_drv_nrf_twi.c
  * @author  mario.kodba
- * @brief   Main of "MUHA" board application source file.
+ * @brief   Configuration for TWI peripheral source file.
  **************************************************************************************************/
+
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-#include "nrf51_muha.h"
-
-#include "cfg_bsp_ecg_ADS1192.h"
-#include "cfg_bsp_mpu9150.h"
-#include "cfg_ble_muha.h"
-#include "cfg_drv_timer.h"
-
-#include "nrf_delay.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log.h"
+#include "nrf51.h"
+#include "cfg_drv_nrf_twi.h"
+#include "cfg_nrf51_muha_pinout.h"
 
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
 
 /***************************************************************************************************
- *                          PUBLIC FUNCTION DEFINITIONS
+ *                              GLOBAL VARIABLES
  **************************************************************************************************/
-/***********************************************************************************************//**
- * @brief Application main function.
- ***************************************************************************************************
- * @param [in]  - None.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    18.10.2020.
- **************************************************************************************************/
-int main(void) {
+//! TWI 1 instance configuration structure
+const nrf_drv_twi_config_t configTwi1 = {
+        .scl = MPU_SCL,                                         //!< SCL pin number.
+        .sda = MPU_SDA,                                         //!< SDA pin number.
+        .frequency = TWI_FREQUENCY_FREQUENCY_K400,              //!< TWI frequency.
+        .interrupt_priority = TWI_DEFAULT_CONFIG_IRQ_PRIORITY,  //!< Interrupt priority.
+        .clear_bus_init = 0u,                                   //!< Clear bus during initialization.
+        .hold_bus_uninit = 0u                                   //!< Hold pull up state on GPIO pins after un-initialization.
+};
 
-    nrf_delay_ms(200u);
-
-    ERR_E error = ERR_NONE;
-
-    // in case NRF logging is used
-    (void) NRF_LOG_INIT(NULL);
-
-    NRF51_MUHA_handle_S muha;
-    muha.ads1192 = &ecgDevice;
-    muha.mpu9150 = &mpuDevice;
-    muha.customService = &customService;
-    muha.timer1 = &instanceTimer1;
-
-    NRF51_MUHA_init(&muha, &error);
-
-    if(error == ERR_NONE) {
-        NRF51_MUHA_start(&muha, &error);
-    }
-
-    // should not get to here
-    return 0;
-}
-
-/***************************************************************************************************
- *                         PRIVATE FUNCTION DEFINITIONS
- **************************************************************************************************/
+//!< TWI 1 instance
+const nrf_drv_twi_t instanceTwi1 = NRF_DRV_TWI_INSTANCE(1);
 
 /***************************************************************************************************
  *                          END OF FILE

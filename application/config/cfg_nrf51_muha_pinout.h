@@ -38,8 +38,8 @@
 #define VIBRO_MOTOR     (7u)    //!< Vibro Motor pin
 #define SD_CD           (9u)    //!< SD CD
 #define LD1             (10u)   //!< LED 1 pin
-#define SDA             (11u)   //!< SDA TWI pin
-#define SCL             (12u)   //!< SCL TWI pin
+#define MPU_SDA         (11u)   //!< MPU SDA TWI pin
+#define MPU_SCL         (12u)   //!< MPU SCL TWI pin
 #define MPU_INT         (15u)   //!< MPU INT
 #define MPU_FSYNC       (16u)   //!< MPU FSYNC
 #define SD_MOSI         (17u)   //!< SD card MOSI pin

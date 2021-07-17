@@ -101,8 +101,8 @@ void HAL_TIMER_clearEvents(NRF_TIMER_Type *tInstance) {
  * @author  mario.kodba
  * @date    20.12.2020.
  **************************************************************************************************/
-void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
-    *((volatile uint32_t *)((uint8_t *) tInstance + offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]))) = 0x0UL;
+void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint32_t channel) {
+    *((volatile uint32_t *)((uint8_t *) tInstance + (uint32_t) offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]))) = 0x0UL;
 }
 
 /***********************************************************************************************//**
@@ -114,8 +114,8 @@ void HAL_TIMER_clearEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
  * @author  mario.kodba
  * @date    20.12.2020.
  **************************************************************************************************/
-bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint8_t channel) {
-    return (bool) *(volatile uint32_t *)((uint32_t *) tInstance + offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]));
+bool HAL_TIMER_checkEvent(NRF_TIMER_Type *tInstance, uint32_t channel) {
+    return (bool) *(volatile uint32_t *)((uint8_t *) tInstance + (uint32_t) offsetof(NRF_TIMER_Type, EVENTS_COMPARE[channel]));
 }
 
 /***********************************************************************************************//**
@@ -153,7 +153,7 @@ bool HAL_TIMER_checkIntEn(NRF_TIMER_Type *tInstance, uint8_t channel) {
  * @author  mario.kodba
  * @date    02.01.2021.
  **************************************************************************************************/
-void HAL_TIMER_enableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel) {
+void HAL_TIMER_enableInterrupt(NRF_TIMER_Type *tInstance, uint32_t channel) {
     tInstance->INTENSET |= (HAL_TIMER_INTENSET_MASK << channel);
 }
 
@@ -181,7 +181,7 @@ void HAL_TIMER_disableInterrupt(NRF_TIMER_Type *tInstance, uint8_t channel) {
  * @date    02.01.2021.
  **************************************************************************************************/
 void HAL_TIMER_writeCompareValue(NRF_TIMER_Type *tInstance,
-        uint8_t channel,
+        uint32_t channel,
         uint32_t compareValue) {
 
     tInstance->CC[channel] = compareValue;

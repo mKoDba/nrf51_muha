@@ -26,6 +26,7 @@
  **************************************************************************************************/
 #include "nrf_sdm.h"
 #include "ble.h"
+#include "ble_ecgs.h"
 
 /***************************************************************************************************
  *                                  CONSTANTS
@@ -46,6 +47,7 @@ extern ble_gap_adv_params_t bleAdvertisingParams;
 extern ble_enable_params_t bleEnableParams;
 extern ble_gap_conn_params_t gapConnectionParams;
 
+extern BLE_ECGS_custom_S customService;
 /***************************************************************************************************
  *                        PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/

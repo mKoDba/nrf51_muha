@@ -1,14 +1,3 @@
-
-#define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                 /**< Include or not the service_changed characteristic. if not enabled, the server's database cannot be changed for the lifetime of the device*/
-
-#define APP_CFG_NON_CONN_ADV_TIMEOUT    0                                 /**< Time for which the device must be advertising in non-connectable mode (in seconds). 0 disables timeout. */
-#define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(100, UNIT_0_625_MS) /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
-
-#define MIN_CONN_INTERVAL                MSEC_TO_UNITS(400, UNIT_1_25_MS)            /**< Minimum acceptable connection interval (0.4 seconds). */
-#define MAX_CONN_INTERVAL                MSEC_TO_UNITS(650, UNIT_1_25_MS)            /**< Maximum acceptable connection interval (0.65 second). */
-#define SLAVE_LATENCY                    0                                           /**< Slave latency. */
-#define CONN_SUP_TIMEOUT                 MSEC_TO_UNITS(4000, UNIT_10_MS)             /**< Connection supervisory timeout (4 seconds). */
-
 /***********************************************************************************************//**
  * Copyright 2021 Mario Kodba
  *
@@ -32,7 +21,6 @@
  *                              INCLUDE FILES
  **************************************************************************************************/
 #include "ble_muha.h"
-#include "cfg_ble_muha.h"
 #include "nrf51_muha.h"
 #include "hal_watchdog.h"
 #include "SEGGER_RTT.h"
@@ -42,9 +30,12 @@
 #include "ble_conn_params.h"
 #include "ble_advertising.h"
 
-#include "ble_dis.h"
 #include "ble_bas.h"
 #include "ble_ecgs.h"
+
+#include "cfg_ble_muha.h"
+#include "cfg_bsp_ecg_ADS1192.h"
+#include "cfg_nrf51_muha_pinout.h"
 
 /***************************************************************************************************
  *                              DEFINES
@@ -53,9 +44,13 @@
                                                              When changing this number remember to adjust the RAM settings */
 #define BLE_MUHA_PERIPHERAL_LINK_COUNT           (1)    /*!< Number of peripheral links used by the application.
                                                              When changing this number remember to adjust the RAM settings */
-BLE_ECGS_custom_S m_ecgs;
 
-ble_bas_t m_bas;                                   /**< Structure used to identify the battery service. */
+ble_bas_t m_bas;                                        //!< Structure used to identify the battery service.
+
+volatile uint8_t muhaConnected = false;                          //!< Flag which shows status of BLE connection of MUHA board.
+volatile uint8_t muhaEcgNotificationEnabled = false;             //!< Flag which shows if the device connected to MUHA board has BLE ECG notification enabled.
+volatile uint8_t muhaMpuNotificationEnabled = false;             //!< Flag which shows if the device connected to MUHA board has BLE MPU notification enabled.
+volatile uint8_t muhaBleTxBufferAvailable   = true;              //!< Flag which shows if there is BLE TX buffer available.
 
 /***************************************************************************************************
  *                          PRIVATE FUNCTION DECLARATIONS
@@ -64,7 +59,8 @@ static void BLE_MUHA_bleStackInit(ERR_E *err);
 static void BLE_MUHA_gapInit(ERR_E *err);
 static void BLE_MUHA_servicesInit(ERR_E *err);
 static void BLE_MUHA_advertisingInit(ERR_E *err);
-static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *evt);
+static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *event);
+
 /***************************************************************************************************
  *                         PUBLIC FUNCTION DEFINITIONS
  **************************************************************************************************/
@@ -136,9 +132,7 @@ void BLE_MUHA_advertisingStart(ERR_E *err) {
  **************************************************************************************************/
 void BLE_MUHA_bleEventCallback(ble_evt_t *bleEvent) {
 
-    ble_bas_on_ble_evt(&m_bas, bleEvent);
-
-    BLE_ECGS_onBleEvt(bleEvent, &m_ecgs);
+    BLE_ECGS_onBleEvt(bleEvent, &customService);
 
     // in case of disconnect, start advertising again
     if(bleEvent->header.evt_id == BLE_GAP_EVT_DISCONNECTED) {
@@ -240,9 +234,10 @@ static void BLE_MUHA_gapInit(ERR_E *err) {
 static void BLE_MUHA_servicesInit(ERR_E *err) {
 
     ERR_E localErr = ERR_NONE;
+    BLE_ECGS_err_E customServiceErr = BLE_ECGS_err_NONE;
     uint32_t nrfErrCode = NRF_SUCCESS;
-    ble_bas_init_t bas_init;
     BLE_ECGS_customInit_S ecgs_init;
+    ble_bas_init_t bas_init;
 
     // initialize Battery Service.
     memset(&bas_init, 0, sizeof(bas_init));
@@ -271,9 +266,18 @@ static void BLE_MUHA_servicesInit(ERR_E *err) {
     ecgs_init.evt_handler = BLE_MUHA_onEcgsEvent;
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.custom_value_char_attr_md.cccd_write_perm);
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ecgs_init.mpu_data_char_attr_md.cccd_write_perm);
 
     if(localErr == ERR_NONE) {
-        BLE_ECGS_init(&m_ecgs, &ecgs_init, &localErr);
+        BLE_ECGS_init(&customService, &ecgs_init, &customServiceErr);
+    }
+
+    if(customServiceErr != BLE_ECGS_err_NONE) {
+        localErr = ERR_BLE_SERVICE_INIT_FAIL;
     }
 
     if(err != NULL) {
@@ -328,32 +332,45 @@ static void BLE_MUHA_advertisingInit(ERR_E *err) {
 }
 
 /***********************************************************************************************//**
- * @brief Called on ECG custom service event.
+ * @brief Called on BLE custom service event.
+ * @details Turns off LED 1 in case of BLE disconnect, turns on on BLE connect, toggles it if
+ *          SoftDevice working and communicating (sending events) to user application.
  ***************************************************************************************************
- * @param [in]  customService   - Pointer to custom ECG service structure.
- * @param [in]  evt             - Pointer to ECG service event type.
+ * @param [in]  customService   - Pointer to custom service structure.
+ * @param [in]  event           - Pointer to custom service event type.
  ***************************************************************************************************
  * @author  mario.kodba
  * @date    16.04.2021.
  **************************************************************************************************/
-static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *evt) {
+static void BLE_MUHA_onEcgsEvent(BLE_ECGS_custom_S *customService, BLE_ECGS_evt_S *event) {
 
-    switch(evt->evt_type) {
-        case BLE_CUS_EVT_NOTIFICATION_ENABLED:
+    switch(event->evt_type) {
+        case BLE_ECGS_EVT_ECG_NOTIFICATION_ENABLED:
+            muhaEcgNotificationEnabled = true;
             break;
 
-        case BLE_CUS_EVT_NOTIFICATION_DISABLED:
+        case BLE_ECGS_EVT_ECG_NOTIFICATION_DISABLED:
+            muhaEcgNotificationEnabled = false;
+            break;
+
+        case BLE_ECGS_EVT_MPU_NOTIFICATION_ENABLED:
+            muhaMpuNotificationEnabled = true;
+            break;
+
+        case BLE_ECGS_EVT_MPU_NOTIFICATION_DISABLED:
+            muhaMpuNotificationEnabled = false;
             break;
 
         case BLE_ECGS_EVT_CONNECTED:
+            muhaConnected = true;
             break;
 
         case BLE_ECGS_EVT_DISCONNECTED:
-              break;
+            muhaConnected = false;
+            break;
 
         default:
-              // no implementation needed.
-              break;
+            break;
     }
 }
 

@@ -13,69 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ***************************************************************************************************
- * @file    main.c
+ * @file    cfg_bsp_mpu9150.h
  * @author  mario.kodba
- * @brief   Main of "MUHA" board application source file.
+ * @brief   Configuration for MPU9150 device header file.
  **************************************************************************************************/
+
+#ifndef CFG_BSP_MPU9150_H_
+#define CFG_BSP_MPU9150_H_
 
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
-#include "nrf51_muha.h"
-
-#include "cfg_bsp_ecg_ADS1192.h"
-#include "cfg_bsp_mpu9150.h"
-#include "cfg_ble_muha.h"
-#include "cfg_drv_timer.h"
-
-#include "nrf_delay.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log.h"
+#include "bsp_mpu9150.h"
 
 /***************************************************************************************************
- *                              DEFINES
+ *                                  CONSTANTS
+ **************************************************************************************************/
+
+
+/***************************************************************************************************
+ *                              DATA STRUCTURES
  **************************************************************************************************/
 
 /***************************************************************************************************
- *                          PUBLIC FUNCTION DEFINITIONS
+ *                              GLOBAL VARIABLES
  **************************************************************************************************/
-/***********************************************************************************************//**
- * @brief Application main function.
- ***************************************************************************************************
- * @param [in]  - None.
- ***************************************************************************************************
- * @author  mario.kodba
- * @date    18.10.2020.
- **************************************************************************************************/
-int main(void) {
-
-    nrf_delay_ms(200u);
-
-    ERR_E error = ERR_NONE;
-
-    // in case NRF logging is used
-    (void) NRF_LOG_INIT(NULL);
-
-    NRF51_MUHA_handle_S muha;
-    muha.ads1192 = &ecgDevice;
-    muha.mpu9150 = &mpuDevice;
-    muha.customService = &customService;
-    muha.timer1 = &instanceTimer1;
-
-    NRF51_MUHA_init(&muha, &error);
-
-    if(error == ERR_NONE) {
-        NRF51_MUHA_start(&muha, &error);
-    }
-
-    // should not get to here
-    return 0;
-}
+extern BSP_MPU9150_config_S mpuDeviceConfig;
+extern BSP_MPU9150_device_S mpuDevice;
 
 /***************************************************************************************************
- *                         PRIVATE FUNCTION DEFINITIONS
+ *                        PUBLIC FUNCTION DECLARATIONS
  **************************************************************************************************/
 
+#endif // #ifndef CFG_BSP_MPU9150_H_ */
 /***************************************************************************************************
  *                          END OF FILE
  **************************************************************************************************/

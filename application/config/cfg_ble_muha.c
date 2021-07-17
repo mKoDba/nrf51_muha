@@ -31,11 +31,14 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
-#define BLE_MUHA_ADVERTISING_NO_TIMEOUT (0u)                                //!< Timeout in seconds after which advertising will timeout, 0 for no timeout.
+#define BLE_MUHA_ADVERTISING_NO_TIMEOUT         (0u)        //!< Timeout in seconds after which advertising will timeout, 0 for no timeout.
+#define BLE_MUHA_ADVERTISING_INTERVAL_100_MS    (160u)      /*!< Advertising interval between 0x0020 and 0x4000 in 0.625 ms units (20ms to 10.24s), see @ref BLE_GAP_ADV_INTERVALS.
+                                                                 If type equals @ref BLE_GAP_ADV_TYPE_ADV_DIRECT_IND, this parameter must be set to 0 for high duty cycle directed advertising.
+                                                                 If type equals @ref BLE_GAP_ADV_TYPE_ADV_DIRECT_IND, set @ref BLE_GAP_ADV_INTERVAL_MIN <= interval <= @ref BLE_GAP_ADV_INTERVAL_MAX for low duty cycle advertising. */
 
-#define BLE_MUHA_GAP_MIN_CONN_INTERVAL   MSEC_TO_UNITS(400, UNIT_1_25_MS)   //!< Minimum acceptable connection interval (0.4 seconds).
-#define BLE_MUHA_GAP_MAX_CONN_INTERVAL   MSEC_TO_UNITS(650, UNIT_1_25_MS)   //!< Maximum acceptable connection interval (0.65 second).
-#define BLE_MUHA_GAP_SLAVE_LATENCY       (0u)                               //!< Slave latency.
+#define BLE_MUHA_GAP_MIN_CONN_INTERVAL   MSEC_TO_UNITS(7.5, UNIT_1_25_MS)   //!< Minimum acceptable connection interval (7.5 milliseconds).
+#define BLE_MUHA_GAP_MAX_CONN_INTERVAL   MSEC_TO_UNITS(8, UNIT_1_25_MS)     //!< Maximum acceptable connection interval (8 milliseconds).
+#define BLE_MUHA_GAP_SLAVE_LATENCY       (1u)                               //!< Slave latency - if set to 0, no connection event will be skipped.
 #define BLE_MUHA_CONN_SUP_TIMEOUT        MSEC_TO_UNITS(4000, UNIT_10_MS)    //!< Connection supervisory timeout (4 seconds).
 
 /***************************************************************************************************
@@ -57,7 +60,7 @@ nrf_clock_lf_cfg_t bleLfClockXTAL = {
 
 ble_enable_params_t bleEnableParams = {
         .common_enable_params = {
-                .vs_uuid_count = 1u,        // some UUID bases (not sure)
+                .vs_uuid_count = 1u,        // user defined UUIDs?
                 .p_conn_bw_counts = NULL    // default BW configuration parameters
         },
         .gap_enable_params = {
@@ -75,14 +78,12 @@ ble_gap_adv_params_t bleAdvertisingParams = {
         .p_peer_addr = NULL,                // not used on BLE_GAP_ADV_TYPE_ADV_IND
         .fp = BLE_GAP_ADV_FP_ANY,           // allows scan requests and connect requests from any device.
         .p_whitelist = NULL,
-        .interval = 160u,                   /*< Advertising interval between 0x0020 and 0x4000 in 0.625 ms units (20ms to 10.24s), see @ref BLE_GAP_ADV_INTERVALS.
-                                                - If type equals @ref BLE_GAP_ADV_TYPE_ADV_DIRECT_IND, this parameter must be set to 0 for high duty cycle directed advertising.
-                                                - If type equals @ref BLE_GAP_ADV_TYPE_ADV_DIRECT_IND, set @ref BLE_GAP_ADV_INTERVAL_MIN <= interval <= @ref BLE_GAP_ADV_INTERVAL_MAX for low duty cycle advertising.*/
-        .timeout = BLE_MUHA_ADVERTISING_NO_TIMEOUT, // advertising timeout in seconds (if set to 0, no timeout will occur)
+        .interval = BLE_MUHA_ADVERTISING_INTERVAL_100_MS,   // advertising interval
+        .timeout = BLE_MUHA_ADVERTISING_NO_TIMEOUT,         // advertising timeout in seconds (if set to 0, no timeout will occur)
         .channel_mask = {
-                .ch_37_off = 0u,            // channel 37 - advertising ON
-                .ch_38_off = 0u,            // channel 38 - advertising ON
-                .ch_39_off = 0u             // channel 39 - advertising ON
+                .ch_37_off = 0u,            // radio channel 37 - advertising ON
+                .ch_38_off = 0u,            // radio channel 38 - advertising ON
+                .ch_39_off = 0u             // radio channel 39 - advertising ON
         }
 };
 
@@ -92,6 +93,8 @@ ble_gap_conn_params_t gapConnectionParams = {
         .slave_latency     = BLE_MUHA_GAP_SLAVE_LATENCY,
         .conn_sup_timeout  = BLE_MUHA_CONN_SUP_TIMEOUT
 };
+
+BLE_ECGS_custom_S customService;                               //!< Structure used to identify the ECG service.
 
 /***************************************************************************************************
  *                          END OF FILE

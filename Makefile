@@ -16,10 +16,14 @@ SRC_FILES += \
   $(PROJ_DIR)/application/nrf51_muha.c \
   $(PROJ_DIR)/application/ble_muha.c \
   $(PROJ_DIR)/application/ble_ecgs.c \
+  $(PROJ_DIR)/application/ringbuffer.c \
   $(PROJ_DIR)/application/bsp/bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/bsp/bsp_mpu9150.c \
   $(PROJ_DIR)/application/config/bsp/cfg_bsp_ecg_ADS1192.c \
+  $(PROJ_DIR)/application/config/bsp/cfg_bsp_mpu9150.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_timer.c \
   $(PROJ_DIR)/application/config/drivers/cfg_drv_spi.c \
+  $(PROJ_DIR)/application/config/drivers/cfg_drv_nrf_twi.c \
   $(PROJ_DIR)/application/config/hal/cfg_hal_watchdog.c \
   $(PROJ_DIR)/application/config/cfg_ble_muha.c \
   $(PROJ_DIR)/application/drivers/drv_common.c \
@@ -40,11 +44,14 @@ SRC_FILES += \
   $(SDK_DIR)/components/libraries/util/sdk_errors.c \
   $(SDK_DIR)/components/drivers_nrf/common/nrf_drv_common.c \
   $(SDK_DIR)/components/drivers_nrf/gpiote/nrf_drv_gpiote.c \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/nrf_drv_twi.c \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated/twi_hw_master.c \
   $(SDK_DIR)/components/toolchain/gcc/gcc_startup_nrf51.S \
   $(SDK_DIR)/components/toolchain/system_nrf51.c \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler/softdevice_handler.c \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler/softdevice_handler_appsh.c \
   $(SDK_DIR)/components/libraries/util/app_util_platform.c \
+  $(SDK_DIR)/components/libraries/fifo/app_fifo.c \
   $(SDK_DIR)/components/libraries/hardfault/hardfault_implementation.c \
   $(SDK_DIR)/components/libraries/util/sdk_mapped_flags.c \
   $(SDK_DIR)/components/libraries/fstorage/fstorage.c \
@@ -76,6 +83,8 @@ INC_FOLDERS += \
   $(SDK_DIR)/components/toolchain/cmsis/include \
   $(SDK_DIR)/components/drivers_nrf/comp \
   $(SDK_DIR)/components/drivers_nrf/twi_master \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated \
+  $(SDK_DIR)/components/drivers_nrf/twi_master/deprecated/config \
   $(SDK_DIR)/components/ble/ble_services/ble_ancs_c \
   $(SDK_DIR)/components/ble/ble_services/ble_ias_c \
   $(SDK_DIR)/components/softdevice/s130/headers \
@@ -143,6 +152,7 @@ INC_FOLDERS += \
   $(SDK_DIR)/components/softdevice/common/softdevice_handler \
   $(SDK_DIR)/components/ble/ble_services/ble_hrs \
   $(SDK_DIR)/components/libraries/log/src \
+  $(SDK_DIR)/components/libraries/fifo \
 
 # Libraries common to all targets
 LIB_FILES += \
@@ -150,7 +160,6 @@ LIB_FILES += \
 # C flags common to all targets
 CFLAGS += -DNRF51
 CFLAGS += -DSOFTDEVICE_PRESENT
-CFLAGS += -DBOARD_PCA10028
 CFLAGS += -D__HEAP_SIZE=0
 CFLAGS += -DBLE_STACK_SUPPORT_REQD
 CFLAGS += -DNRF_SD_BLE_API_VERSION=2
@@ -170,7 +179,6 @@ CXXFLAGS += \
 ASMFLAGS += -x assembler-with-cpp
 ASMFLAGS += -DRNF51
 ASMFLAGS += -DSOFTDEVICE_PRESENT
-ASMFLAGS += -DBOARD_PCA10028
 ASMFLAGS += -D__HEAP_SIZE=0
 ASMFLAGS += -DBLE_STACK_SUPPORT_REQD
 ASMFLAGS += -DNRF_SD_BLE_API_VERSION=2

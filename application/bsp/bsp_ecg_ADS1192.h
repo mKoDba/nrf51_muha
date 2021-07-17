@@ -34,7 +34,7 @@
  *                              DEFINES
  **************************************************************************************************/
 #define DEBUG false                                     //!< DEBUG enable macro
-#define BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE   (100u)  //!< Number of ADC samples to be stored to buffer
+#define BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE   (10u)   //!< Number of ADC samples (16-bit) to be stored to buffer
 
 /***************************************************************************************************
  *                              ENUMERATIONS
@@ -155,7 +155,7 @@ typedef struct BSP_ECG_ADS1192_config_STRUCT {
 //! ECG ADS1192 driver device structure
 typedef struct BSP_ECG_ADS1192_device_STRUCT {
     BSP_ECG_ADS1192_config_S    *config;        //!< Pointer to ECG driver configuration
-    int16_t adcVal[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE]; //!< ADC values buffer to be processed
+    int16_t buffer[BSP_ECG_ADS1192_CONNECTION_EVENT_SIZE];  //!< ADC values buffer to be processed
     uint16_t sampleIndex;                       //!< Current index of sample
 #if (DEBUG == true)
     int16_t temperature;                        //!< Temperature of device
@@ -163,6 +163,8 @@ typedef struct BSP_ECG_ADS1192_device_STRUCT {
     float analogVddSupply;                      //!< Analog VDD supply
 #endif // #if (DEBUG == true)
     bool isInitialized;                         //!< Is device initialized
+    volatile bool dataReady;                    //!< Is data ready flag
+    volatile bool bufferFull;                   //!< Is device data buffer filled
 } BSP_ECG_ADS1192_device_S;
 /***************************************************************************************************
  *                              GLOBAL VARIABLES
@@ -179,7 +181,10 @@ void BSP_ECG_ADS1192_startEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
 void BSP_ECG_ADS1192_stopEcgReading(BSP_ECG_ADS1192_device_S *inDevice,
         BSP_ECG_ADS1192_err_E *outErr);
-void BSP_ECG_ADS1192_DrdyPin_IRQHandler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
+void BSP_ECG_ADS1192_readData(BSP_ECG_ADS1192_device_S *inDevice,
+        const uint16_t inSize,
+        int16_t *outData,
+        BSP_ECG_ADS1192_err_E *outErr);
 
 #endif // #ifndef BSP_ECG_ADS1192_H_
 /***************************************************************************************************
