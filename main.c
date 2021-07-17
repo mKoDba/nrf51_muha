@@ -18,28 +18,6 @@
  * @brief   Main of "MUHA" board application source file.
  **************************************************************************************************/
 
-/***********************************************************************************************//**
-* @mainpage Software for nRF51 "MUHA" board - Master's project
-****************************************************************************************************
-* Introduction
-* ------------
-*
-* This user manual describes software architecture of nRF51 MUHA board and its functionality.
-* It was specifically made as part of Master's project on Faculty of Electrical Engineering and
-* Computing at University of Zagreb.
-*
-* Folder structure is divided into a number of subfolders, each representing specific layers
-* of functionality.
-* - application
-*    * bsp (board support package)
-*    * config (configuration files)
-*    * (non Nordic) drivers (nRF51 peripheral drivers)
-*    * (non Nordic) HAL (Hardware abstraction layer)
-* - SDK (Nordic SDK)
-*
-***************************************************************************************************/
-
-
 /***************************************************************************************************
  *                              INCLUDE FILES
  **************************************************************************************************/
@@ -75,7 +53,8 @@ int main(void) {
 
     ERR_E error = ERR_NONE;
 
-    uint32_t err_code = NRF_LOG_INIT(NULL);
+    // in case NRF logging is used
+    (void) NRF_LOG_INIT(NULL);
 
     NRF51_MUHA_handle_S muha;
     muha.ads1192 = &ecgDevice;

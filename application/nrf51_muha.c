@@ -137,7 +137,6 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
     uint32_t err_code = NRF_SUCCESS;
     BSP_ECG_ADS1192_err_E ecgErr = BSP_ECG_ADS1192_err_NONE;
     BSP_MPU9150_err_E mpuErr = BSP_MPU9150_err_NONE;
-    DRV_TIMER_err_E timerErr = DRV_TIMER_err_NONE;
     // 16-bit data from ADS1192 goes here
     int16_t ecgData[3] = { 0 };
 
@@ -156,7 +155,13 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
             APP_TIMER_MODE_REPEATED,
             NRF51_MUHA_ledHeartbeatInterrupt);
 
+    // template for using TIMER to measure time difference - timer resolution may need to be changed in config files
 //    DRV_TIMER_enableTimer(muha->timer1, &timerErr);
+//    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+//
+//    uint32_t endTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
+//
+//    uint32_t timeDiff = DRV_TIMER_getTimeDiff(&instanceTimer1, &startTime, &endTime);
 
     if(localErr == ERR_NONE) {
         BSP_ECG_ADS1192_startEcgReading(muha->ads1192, &ecgErr);
@@ -169,13 +174,6 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
     if(localErr == ERR_NONE) {
         nrf_drv_gpiote_in_event_enable(MPU_INT, true);
     }
-
-
-//    uint32_t startTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
-//
-//    uint32_t endTime = DRV_TIMER_captureTimer(&instanceTimer1, DRV_TIMER_cc_CHANNEL0, &timerErr);
-//
-//    uint32_t timeDiff = DRV_TIMER_getTimeDiff(&instanceTimer1, &startTime, &endTime);
 
     // start application timer
     app_timer_start(m_led_timer_id, LED_HEARTBEAT_INTERVAL, NULL);
@@ -199,7 +197,6 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
             if(muha->ads1192->dataReady == true) {
 
                 BSP_ECG_ADS1192_readData(muha->ads1192, 6u, &ecgData[0], &ecgErr);
-//                SEGGER_RTT_printf(0u, "%d\n", ecgData[2]);
 
                 if(ring_buffer_is_full(&ecgFifoStruct) == 0u) {
                     ring_buffer_queue_arr(&ecgFifoStruct, (char *) &ecgData[2], 2u);
@@ -235,9 +232,7 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
             }
 
 
-            /*
-             * new data ready to be read from MPU-9150
-             */
+            // new data ready to be read from MPU-9150
             if(muha->mpu9150->dataReady == true) {
                 // read in new values from MPU
                 BSP_MPU9150_updateValues(muha->mpu9150, &muha->mpu9150->dataBuffer[0], &mpuErr);
@@ -245,11 +240,6 @@ void NRF51_MUHA_start(NRF51_MUHA_handle_S *muha, ERR_E *error) {
                 if(ring_buffer_is_full(&mpuFifoStruct) == 0u) {
                     ring_buffer_queue_arr(&mpuFifoStruct, (char *) &muha->mpu9150->dataBuffer[0], NRF51_MUHA_MPU9150_BLE_BYTE_SIZE);
                 }
-
-//                SEGGER_RTT_printf(0u, "%d,%d,%d,%d,%d,%d\n", muha->mpu9150->dataBuffer[0],
-//                        muha->mpu9150->dataBuffer[1],
-//                        muha->mpu9150->dataBuffer[2], muha->mpu9150->dataBuffer[3],
-//                        muha->mpu9150->dataBuffer[4], muha->mpu9150->dataBuffer[5]);
 
                 // update MPU characteristic data in BLE custom service and push notification if there is TX buffer available
                 if(muhaBleTxBufferAvailable == true) {

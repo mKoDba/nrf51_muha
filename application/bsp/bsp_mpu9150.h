@@ -32,7 +32,8 @@
 /***************************************************************************************************
  *                              DEFINES
  **************************************************************************************************/
-#define DEPRECATED_TWI      true        //!< If set to true uses twi_hw_master drivers (workaround in order for TWI to work with SoftDevice)
+//! If set to true uses twi_hw_master drivers (workaround in order for TWI to work with SoftDevice) instead of nrf_twi drivers
+#define DEPRECATED_TWI      true
 
 #define BSP_MPU9150_SENSOR_DATA_INT16_SIZE  (7u)    //!< Number of 16-bit (sensor) data stored to device data buffer
 

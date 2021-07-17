@@ -965,7 +965,7 @@ static void BSP_MPU9150_configuration(BSP_MPU9150_device_S *inDevice, BSP_MPU915
                     &err);
         }
 
-        /*
+        /* TODO: [mario.kodba 28.06.2021] Needs to be tested
          * Setup magnetometer configuration
          */
 //        if(err == BSP_MPU9150_err_NONE ) {
